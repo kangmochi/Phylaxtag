@@ -34,19 +34,19 @@ body {
   border-radius: 4px;
 }
 
-a { color: var(--accent-2); }
+#root a { color: var(--accent-2); }
 
-h1, h2, h3 {
+#root h1, #root h2, #root h3 {
   font-family: var(--serif);
   font-weight: 500;
   letter-spacing: -0.01em;
   line-height: 1.15;
 }
 
-h1 { font-size: 2rem; margin: 0 0 0.4rem; }
-h2 { font-size: 1.2rem; margin: 1.8rem 0 0.6rem; }
+#root h1 { font-size: 2rem; margin: 0 0 0.4rem; }
+#root h2 { font-size: 1.2rem; margin: 1.8rem 0 0.6rem; }
 
-p { margin: 0.45rem 0; }
+#root p { margin: 0.45rem 0; }
 
 /* ---------- banner ---------- */
 .banner {
@@ -63,14 +63,20 @@ p { margin: 0.45rem 0; }
   text-transform: uppercase;
 }
 
-/* ---------- app shell ---------- */
+/* ---------- app shell ----------
+   Everything below is scoped to #root on purpose. The near-wallet-selector
+   modal mounts on document.body (outside #root) and reuses generic class
+   names such as .sidebar and .app. Unscoped rules leak into it: .sidebar's
+   height: calc(100vh - 2.35rem) made every wallet row ~862px tall, which
+   pushed the wallet buttons out of view. Keep new global element selectors
+   scoped to #root as well. */
 .app {
   display: grid;
   grid-template-columns: 248px minmax(0, 1fr);
   min-height: calc(100vh - 2rem);
 }
 
-.sidebar {
+#root .sidebar {
   position: sticky;
   top: 0;
   align-self: start;
@@ -98,13 +104,13 @@ p { margin: 0.45rem 0; }
 
 .brand svg { width: 26px; height: 26px; flex: none; }
 
-.sidebar nav {
+#root .sidebar nav {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
 }
 
-.sidebar nav a {
+#root .sidebar nav a {
   display: block;
   padding: 0.6rem 0.75rem;
   border-radius: 10px;
@@ -113,9 +119,9 @@ p { margin: 0.45rem 0; }
   text-decoration: none;
 }
 
-.sidebar nav a:hover { background: rgba(255, 255, 255, 0.05); color: var(--paper); }
+#root .sidebar nav a:hover { background: rgba(255, 255, 255, 0.05); color: var(--paper); }
 
-.sidebar nav a[aria-current="page"] {
+#root .sidebar nav a[aria-current="page"] {
   background: rgba(33, 114, 229, 0.2);
   color: var(--paper);
   box-shadow: inset 2px 0 0 var(--accent);
@@ -142,7 +148,7 @@ p { margin: 0.45rem 0; }
   min-width: 0;
 }
 
-main {
+#root main {
   width: 100%;
   max-width: 62rem;
   padding: 2rem 2.2rem 1rem;
@@ -167,7 +173,7 @@ main {
 }
 
 /* ---------- cards & forms ---------- */
-.card, form, dialog, article > section {
+.card, #root form, #root dialog, #root article > section {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -175,20 +181,20 @@ main {
   margin: 1rem 0;
 }
 
-dialog {
+#root dialog {
   max-width: 30rem;
   color: var(--paper);
   background: var(--card);
   border: 1px solid var(--line-strong);
 }
 
-dialog::backdrop { background: rgba(4, 6, 9, 0.72); }
+#root dialog::backdrop { background: rgba(4, 6, 9, 0.72); }
 
-label, .field { display: block; margin: 0.85rem 0; font-size: 0.82rem; color: var(--muted); }
+#root label, #root .field { display: block; margin: 0.85rem 0; font-size: 0.82rem; color: var(--muted); }
 
-input, select, textarea, button { font: inherit; }
+#root input, #root select, #root textarea, #root button { font: inherit; }
 
-input, select, textarea {
+#root input, #root select, #root textarea {
   display: block;
   width: 100%;
   margin-top: 0.35rem;
@@ -199,11 +205,11 @@ input, select, textarea {
   border-radius: 10px;
 }
 
-input::placeholder, textarea::placeholder { color: #8b85ad; }
+#root input::placeholder, #root textarea::placeholder { color: #8b85ad; }
 
-input:focus, select:focus, textarea:focus { border-color: var(--accent); outline: none; }
+#root input:focus, #root select:focus, #root textarea:focus { border-color: var(--accent); outline: none; }
 
-button, .button {
+#root button, #root .button {
   display: inline-block;
   margin: 0.35rem 0.4rem 0.35rem 0;
   padding: 0.6rem 1rem;
@@ -217,17 +223,17 @@ button, .button {
   cursor: pointer;
 }
 
-button:hover, .button:hover { background: #3d86f0; border-color: #3d86f0; }
+#root button:hover, #root .button:hover { background: #3d86f0; border-color: #3d86f0; }
 
-button:disabled { opacity: 0.55; cursor: not-allowed; }
+#root button:disabled { opacity: 0.55; cursor: not-allowed; }
 
-button.secondary, a.button.secondary {
+#root button.secondary, #root a.button.secondary {
   background: transparent;
   color: var(--paper);
   border-color: var(--line-strong);
 }
 
-button.secondary:hover, a.button.secondary:hover { border-color: var(--accent); color: var(--accent-2); }
+#root button.secondary:hover, #root a.button.secondary:hover { border-color: var(--accent); color: var(--accent-2); }
 
 /* ---------- text helpers ---------- */
 .status {
@@ -259,18 +265,18 @@ button.secondary:hover, a.button.secondary:hover { border-color: var(--accent); 
   overflow-wrap: anywhere;
 }
 
-ul { padding-left: 1.2rem; }
-li { margin: 0.2rem 0; }
+#root ul { padding-left: 1.2rem; }
+#root li { margin: 0.2rem 0; }
 
 /* ---------- tables ---------- */
-table {
+#root table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.88rem;
   margin: 0.6rem 0;
 }
 
-th, td {
+#root th, #root td {
   text-align: left;
   vertical-align: top;
   border-bottom: 1px solid var(--line);
@@ -278,9 +284,9 @@ th, td {
   word-break: break-word;
 }
 
-th { color: var(--muted); font-weight: 500; font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; }
+#root th { color: var(--muted); font-weight: 500; font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; }
 
-tbody tr:last-child td { border-bottom: 0; }
+#root tbody tr:last-child td { border-bottom: 0; }
 
 
 
@@ -387,9 +393,9 @@ tbody tr:last-child td { border-bottom: 0; }
   .topline .banner { position: static; }
   .menu-toggle { display: block; }
 
-  .app { grid-template-columns: minmax(0, 1fr); }
+  #root .app { grid-template-columns: minmax(0, 1fr); }
 
-  .sidebar {
+  #root .sidebar {
     display: none;
     position: static;
     height: auto;
@@ -398,20 +404,20 @@ tbody tr:last-child td { border-bottom: 0; }
     padding: 1rem 0.9rem;
   }
 
-  .sidebar.open { display: flex; }
+  #root .sidebar.open { display: flex; }
 
   .cols { grid-template-columns: minmax(0, 1fr); }
-  main { padding: 1.2rem 1rem 1rem; }
+  #root main { padding: 1.2rem 1rem 1rem; }
   .foot { padding: 1rem; }
   h1 { font-size: 1.6rem; }
 }
 
 @media (max-width: 480px) {
-  table, thead, tbody, th, td, tr { display: block; }
+  #root table, #root thead, #root tbody, #root th, #root td, #root tr { display: block; }
   thead { display: none; }
-  tr { border-bottom: 1px solid var(--line); padding: 0.5rem 0; }
-  td { border: 0; padding: 0.2rem 0; }
-  td::before {
+  #root tr { border-bottom: 1px solid var(--line); padding: 0.5rem 0; }
+  #root td { border: 0; padding: 0.2rem 0; }
+  #root td::before {
     content: attr(data-label);
     display: block;
     color: var(--muted);
