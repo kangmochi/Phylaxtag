@@ -1,0 +1,26 @@
+# Rust
+target/
+**/*.rs.bk
+
+# Contract wasm build output
+*.wasm
+
+# Node
+node_modules/
+dist/
+.cache/
+.next/
+out/
+
+# Secrets, local env, and credentials
+.env
+.env.*
+!.env.example
+
+# Local submission payloads (may contain personal data)
+*payload*.json
+submission*.json
+
+# Editor and OS
+.DS_Store
+*.swp
