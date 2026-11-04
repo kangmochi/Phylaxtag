@@ -46,6 +46,9 @@ pub struct Asset {
     pub holder_total: u32,
     /// Next ring-buffer write index, in `0..50`.
     pub holder_next: u32,
+    /// Outstanding `expire` refund. `None` when no refund transfer is in flight.
+    /// The callback acts only while this is `Some(amount)`. Spec 5.3.
+    pub pending_refund: Option<NearToken>,
 }
 
 /// One service payout attempt. Spec 5.3. At most 50 per token.
@@ -57,6 +60,9 @@ pub struct ServiceRecord {
     pub work_type: String,
     pub note_hash: String,
     pub owner_at_claim: AccountId,
+    /// `last_claim_at_ns` from before this claim. Restored on payout failure
+    /// only when the asset clock still equals this record's `timestamp_ns`.
+    pub prev_last_claim_at_ns: Option<u64>,
     pub timestamp_ns: u64,
     pub block_height: u64,
     pub status: ServiceStatus,

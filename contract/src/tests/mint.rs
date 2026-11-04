@@ -212,8 +212,14 @@ fn mint_happy_path() {
     let storage_after = env::storage_usage();
 
     assert!(storage_after > storage_before, "mint must write storage");
-    let storage_cost =
-        env::storage_byte_cost().saturating_mul(u128::from(storage_after - storage_before));
+    let first_holder = HolderRecord {
+        owner: issuer(),
+        since_ns: NOW_NS,
+        balance_at_transfer: fund,
+    };
+    let billable = (storage_after - storage_before)
+        + crate::storage::prepaid_extra_bytes(&issuer(), &first_holder);
+    let storage_cost = env::storage_byte_cost().saturating_mul(u128::from(billable));
     let expected_refund = deposit.saturating_sub(fund).saturating_sub(storage_cost);
     assert!(
         expected_refund.as_yoctonear() > 0,
@@ -250,6 +256,7 @@ fn mint_happy_path() {
     assert_eq!(view.next_claim_ns, None);
     assert_eq!(view.asset.holder_total, 1);
     assert_eq!(view.asset.holder_next, 1);
+    assert_eq!(view.asset.pending_refund, None);
 
     let holders = contract
         .get_holder_history(TOKEN.to_string())

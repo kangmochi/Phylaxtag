@@ -7,12 +7,17 @@ use near_sdk::collections::Vector;
 use near_sdk::{AccountId, NearToken, Promise, env, require};
 
 use crate::events;
+use crate::storage::prepaid_extra_bytes;
 use crate::types::{Asset, HolderRecord, ServiceRecord, WarrantyStatus, is_lowercase_hex_64};
 use crate::{Contract, StorageKey};
 
 impl Contract {
-    /// Checks run in the spec 5.1 order. State written for the token is measured
-    /// and the issuer is refunded `deposit - fund_amount - storage_cost`.
+    /// Checks run in the spec 5.1 order. State written for the token is measured.
+    /// On top of that, mint charges the spec 5.4 worst-case prepay (50 holder
+    /// records and 50 service records at maximum sizes, minus the holder slot
+    /// this call already wrote, plus the asset-option and owner-id growth
+    /// documented in `storage`). The issuer is refunded the rest. The prepay
+    /// is not refunded.
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn perform_mint(
         &mut self,
@@ -75,6 +80,7 @@ impl Contract {
             status: WarrantyStatus::Active,
             holder_total: 1,
             holder_next: 1,
+            pending_refund: None,
         };
         self.assets.insert(&token_id, &asset);
         self.used_serials.insert(&(issuer.clone(), serial_hash));
@@ -87,15 +93,18 @@ impl Contract {
         let mut holders: Vector<HolderRecord> = Vector::new(StorageKey::HoldersFor {
             token_hash: env::sha256(token_id.as_bytes()),
         });
-        holders.push(&HolderRecord {
+        let first_holder = HolderRecord {
             owner: issuer.clone(),
             since_ns: minted_at,
             balance_at_transfer: fund_amount,
-        });
+        };
+        holders.push(&first_holder);
         self.holders.insert(&token_id, &holders);
 
         let storage_used = env::storage_usage() - storage_before;
-        let storage_cost = env::storage_byte_cost().saturating_mul(u128::from(storage_used));
+        let prepaid = prepaid_extra_bytes(&issuer, &first_holder);
+        let billable = storage_used.saturating_add(prepaid);
+        let storage_cost = env::storage_byte_cost().saturating_mul(u128::from(billable));
         let required = fund_amount.saturating_add(storage_cost);
         require!(env::attached_deposit() >= required, "Deposit too small");
 

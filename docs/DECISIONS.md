@@ -11,13 +11,13 @@ Checked on 4 November 2026 (Asia/Jakarta, UTC+7), against crates.io and the Rust
 | near-workspaces | 0.24.0 | 2026-10-26 23:05 UTC | 1.95 |
 | Rust toolchain | 1.99.1 | stable since 15 October 2026 (`rustc 1.99.1`, commit `58cf8f9c3`, 2026-10-13) | — |
 
-`near-workspaces` 0.24.0 stays the pin for sandbox tests. It is not a dependency of `contract/`. Task 003 adds it in a separate `integration-tests/` crate. `cargo test` in `contract/` does not need OpenSSL or pkg-config. Checked in task 002: `cargo tree -i openssl-sys` matches no package. The unit-test feature of `near-sdk` still builds `aws-lc-sys` through `near-crypto`. That crate does not use the system OpenSSL library.
+`near-workspaces` 0.24.0 is a dependency of `integration-tests/` only, pinned `=0.24.0` with the `experimental` feature so a test can read `protocol_config` (the storage byte cost). That crate also depends on `near-primitives` `=0.38.0`, which is the version `near-workspaces` 0.24.0 already uses, so the test can name `BlockReference`. `near-sandbox` 0.4.0 comes in through `near-workspaces` and is the local chain binary. None of these are dependencies of `contract/`. `cargo test` in `contract/` does not need OpenSSL or pkg-config. Checked again in task 003: `cargo tree -i openssl-sys` in `contract/` matches no package. The unit-test feature of `near-sdk` still builds `aws-lc-sys` through `near-crypto`. That crate does not use the system OpenSSL library. The integration crate does compile `openssl-sys` through the sandbox stack.
 
 ### Why these versions
 
 These are the current stable releases on the day checked. `near-sdk` 5.30.0 and `near-contract-standards` 5.30.0 are the same near-sdk-rs release, built for nearcore 2.14 (protocol 88). `near-workspaces` 0.24.0 depends on that same nearcore line (`near-primitives` 0.38.0 and `near-sandbox` 0.4.0), so the three pins belong together. Rust 1.99.1 is the current stable toolchain and it satisfies the MSRV of 1.95. Rust 1.100.0 is not stable yet (scheduled for 12 November 2026).
 
-`near-sdk` and `near-contract-standards` are exact (`=5.30.0`) in `contract/Cargo.toml`. `near-workspaces` is not in that file; task 003 will pin `=0.24.0` in `integration-tests/`. `contract/Cargo.lock` is committed. `rust-toolchain.toml` pins Rust 1.99.1 and the `wasm32-unknown-unknown` target.
+`near-sdk` and `near-contract-standards` are exact (`=5.30.0`) in `contract/Cargo.toml`. `near-workspaces` is exact (`=0.24.0`) in `integration-tests/Cargo.toml`. Both `Cargo.lock` files are committed. `rust-toolchain.toml` pins Rust 1.99.1 and the `wasm32-unknown-unknown` target.
 
 ### Fallback
 
@@ -43,21 +43,38 @@ Checked in `near-contract-standards` 5.30.0. `NonFungibleToken` has no `on_trans
 
 ## Callback gas
 
-`on_payout` and `on_expire_payout` are attached with `Gas::from_tgas(10)` and `with_unused_gas_weight(0)`.
+Measured on 4 November 2026 (Asia/Jakarta, UTC+7) against a local sandbox (`near-workspaces` 0.24.0, `near-sandbox` 0.4.0, `near-sdk` 5.30.0, Rust 1.99.1). The number is `gas_burnt` on the receipt whose executor is the contract and whose logs name the event. Gas is in units, not TGas, except the constant.
 
-TODO: measure in task 003. 10 TGas is a reserve so the callback still has gas after the NEAR transfer. It is not a measured figure.
+| Call | Path | Gas burnt (max of the runs) |
+| --- | --- | --- |
+| `pay_service` | success (`service_requested`, then `service_paid`) | 3_215_722_280_679 |
+| `pay_service` | failure (`service_requested`, workshop account missing) | 3_199_685_578_871 |
+| `on_payout` | success (`service_paid`) | 2_261_627_777_595 |
+| `on_payout` | failure (`payout_failed`) | 2_455_261_370_702 |
+| `expire` | success (`warranty_expired`, refund lands) | 2_715_450_958_257 |
+| `expire` | refund transfer fails, including the retry (`expire_refund_retried`) | 2_716_725_466_119 |
+| `on_expire_payout` | success (no warranty event) | 1_971_720_956_278 |
+| `on_expire_payout` | failure (`expire_refund_failed`) | 2_073_643_155_688 |
 
-## Readings kept for later tasks
+`CALLBACK_GAS` is `Gas::from_tgas(5)` with `with_unused_gas_weight(0)`. The highest callback burn is the failed `on_payout`, 2_455_261_370_702 gas (2.455 TGas). Twice that is 4.91 TGas, so the constant is the next whole TGas, 5. The margin is 5_000_000_000_000 − 2_455_261_370_702 = 2_544_738_629_298 gas. The success path of that callback burned about 0.20 TGas less than the failure path. The margin is large enough for that gap to happen twice, because a callback that runs out of gas is not retried by the user. The earlier 10 TGas figure was not a measurement. The 30 TGas used while capturing these numbers was only headroom so the callback could run; it is not the attached value anymore.
 
-Spec v3.5 settled the nine readings from the task 001 pull request. The notes below are the choices this code makes where v3.5 is still thin. They are also in the task 002 pull request for Pharita. The spec file is unchanged.
+A caller of `pay_service` or `expire` must attach more than `CALLBACK_GAS` plus the function's own burn (about 3.3 TGas and 2.8 TGas above). The sandbox tests attach 200 TGas.
 
-- `token_id` of 1 to 32 bytes is inclusive. A 32-byte id is accepted. A 33-byte id fails with `Bad token_id`.
-- `pay_service` on a missing token fails with `Not owner`. Spec 5.1 does not list `Token not found` for that method.
-- An amount of 0 fails the `0 < amount ≤ cap` check with `Over cap`, the only error spec 5.1 lists for that line.
-- The 1-yocto check uses the SDK string `Requires attached deposit of exactly 1 yoctoNEAR`. Spec 5.1 does not name one.
-- A failed payout does not clear `last_claim_at_ns`. Spec 5.1 sets it in `pay_service` and does not list it in the failure callback.
-- `on_payout` and `on_expire_payout` are not idempotent. A second failure would add `amount` again. Spec 5.1a does not say to restore only while the record is `Pending`.
-- `expire` returns the yoctoNEAR sent on that call. The failure callback can put it back afterwards.
-- `get_service_history` with `limit: Some(0)` returns an empty page. Spec 5.1a says the default and the max are 50, and not what 0 means.
-- `payout_failed` uses the JSON field `record_index`. Spec 5.5 says "record index".
-- The holder ring does not pre-allocate max-length account ids. Spec 5.4 says an overwrite changes storage only by the size difference. A longer new account id can still grow storage. The log code does not panic when the ring is full. It cannot stop the runtime from failing the receipt if the reserve cannot pay that byte delta.
+## Storage bytes and cost
+
+Same sandbox run, 4 November 2026 (Asia/Jakarta). `storage_amount_per_byte` from the sandbox protocol config was 10_000_000_000_000_000_000 yoctoNEAR (10^19). One byte costs 0.00001 NEAR.
+
+| What | Bytes | Cost |
+| --- | --- | --- |
+| One mint, bytes actually written (chain `storage_usage` delta) | 1_416 | 0.01416 NEAR |
+| One service record (second `pay_service` on the same token; the first record's delta was also 299) | 299 | 0.00299 NEAR |
+| One holder record (transfer between two 7-character account ids, so the owner-id length does not change) | 120 | 0.0012 NEAR |
+
+`WORST_CASE_TOKEN_BYTES` is derived in `contract/src/storage.rs` from Borsh lengths plus the 40-byte trie-node overhead. It is 27_200 bytes: 50 max holder slots and 50 max service slots. For the 7-byte issuer used in the unit tests, `prepaid_extra_bytes` is 27_218. That is the 27_200, minus the holder slot mint already wrote, plus 24 bytes of `Asset` option growth and the owner-id growth from 7 bytes to 64. 27_218 bytes cost 0.27218 NEAR. Mint charges this on top of the bytes it writes. The prepay is not refunded. T26 checks `contract balance ≥ total_locked + storage_usage × storage_byte_cost` after mint, pay success, pay failure, transfer, expire success, and expire refund failure plus retry. The unit test `storage_prepay_covers_full_rings` fills 50 service records and the holder ring, including 64-byte replacements, and checks the same inequality.
+
+## Notes for the spec
+
+Spec v3.6 settled the task 002 readings (token-not-found order, zero amount, cooldown restore, idempotent callbacks, `expire` return, `limit = 0`, event names). Two gaps are still open. They are also in the task 003 pull request. The spec file is unchanged.
+
+- Spec 5.4 names only the 50 holder records and 50 service records. `last_claim_at_ns` (`None` to `Some`) grows the asset by 8 bytes, and `pending_refund` grows it by 16. The NEP-171 owner is stored again in `owner_by_id` and in the `tokens_per_owner` key, so a longer owner id grows storage by twice the Borsh length delta. The prepay includes both, or a full ring plus a 64-byte owner would break the balance invariant. Suggested fix: add those bytes to the worst-case prepay in 5.4.
+- Spec 5.1 does not say what a second `expire` does while `pending_refund` is still `Some` and a restored balance is waiting. This code returns 0 and leaves state and transfers alone, so the original callback can still restore its amount. Suggested fix: say that `expire` is a no-op while a refund is in flight. `expire_noop_while_refund_in_flight` covers that path.

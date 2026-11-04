@@ -8,6 +8,7 @@ mod expire;
 mod holders;
 mod mint;
 mod pay;
+mod storage;
 mod types;
 
 pub use types::{
@@ -17,9 +18,14 @@ pub use types::{
 
 /// Static gas attached to `on_payout` and `on_expire_payout`.
 ///
-/// TODO: measure in task 003. 10 TGas is a reserve so the callback still has
-/// gas after the transfer. It is not a measured figure.
-const CALLBACK_GAS: near_sdk::Gas = near_sdk::Gas::from_tgas(10);
+/// Measured on 4 November 2026 (Asia/Jakarta) with `near-workspaces` 0.24.0.
+/// The highest callback burn was `on_payout` failure at 2_455_261_370_702 gas.
+/// 5 TGas is twice that maximum, rounded up to the next whole TGas
+/// (2 × 2.455 TGas = 4.91). The extra 2.545 TGas covers the 0.20 TGas gap
+/// between the success and failure paths, twice, so a similar protocol gas
+/// change still leaves the callback able to finish. A callback that runs out
+/// of gas is not retried by the user. Figures are in `docs/DECISIONS.md`.
+pub(crate) const CALLBACK_GAS: near_sdk::Gas = near_sdk::Gas::from_tgas(5);
 
 /// Service history stops at 50 records. The 51st `pay_service` fails.
 const HISTORY_LIMIT: u64 = 50;
@@ -125,11 +131,10 @@ impl Contract {
 
     /// Spec 5.1, 5.4; tests T08, T28, T29, T34, T39.
     ///
-    /// T17 (no `top_up` method) and the full T26 storage measurement are task 003.
-    ///
     /// The caller must be an allowlisted issuer and becomes the token owner.
-    /// `balance` and `total_locked` both increase by `fund_amount`. Storage is
-    /// paid from the attached deposit and the excess is refunded to the issuer.
+    /// `balance` and `total_locked` both increase by `fund_amount`. Storage,
+    /// including the worst-case record prepay, is paid from the attached
+    /// deposit and the excess is refunded to the issuer. There is no `top_up`.
     #[payable]
     #[allow(clippy::too_many_arguments)]
     pub fn mint(
@@ -158,7 +163,8 @@ impl Contract {
     /// Spec 5.1, 5.2; tests T01, T02, T03, T04, T05, T07, T12, T15, T16, T18, T23, T27, T30, T35.
     ///
     /// Deducts the token balance and `total_locked`, appends a Pending record,
-    /// then transfers `amount` to the workshop. `on_payout` settles the record.
+    /// emits `service_requested`, then transfers `amount` to the workshop.
+    /// `on_payout` emits `service_paid` only when that transfer succeeds.
     #[payable]
     pub fn pay_service(
         &mut self,
@@ -173,17 +179,21 @@ impl Contract {
 
     /// Spec 5.1; tests T06, T09, T11, T21, T22, T36.
     ///
-    /// Returns the yoctoNEAR sent to the issuer on this call. `0` when there is
-    /// nothing to refund. A failed `on_expire_payout` can put that amount back,
-    /// and a later `expire` sends it again.
+    /// Returns the yoctoNEAR this call attempted to send. `0` when the balance
+    /// is already zero, and when `pending_refund` is already set (that call
+    /// changes nothing). The first transition emits `warranty_expired`. A later
+    /// call that still has a balance, and no refund in flight, emits
+    /// `expire_refund_retried`.
     pub fn expire(&mut self, token_id: TokenId) -> U128 {
         self.perform_expire(token_id)
     }
 
     /// Spec 5.1, 5.1a; tests T10, T19, T21. T20 is the sandbox repeat (task 003).
     ///
-    /// `true` when the workshop transfer succeeded. `false` restores `amount`
-    /// to the token balance and to `total_locked`.
+    /// Acts only while the record is Pending. `true` marks it Paid and emits
+    /// `service_paid`. `false` restores `amount` to the token balance and to
+    /// `total_locked`, and restores the cooldown when no newer claim exists.
+    /// A second call returns `false` and changes nothing.
     #[private]
     pub fn on_payout(
         &mut self,
@@ -197,8 +207,10 @@ impl Contract {
 
     /// Spec 5.1, 5.1a; tests T22, T36.
     ///
+    /// Acts only while `pending_refund == Some(amount)`, then clears it.
     /// `true` when the issuer received the refund. `false` restores `amount`
-    /// to the token balance and to `total_locked`. Stored status is unchanged.
+    /// to the token balance and to `total_locked`. A second call returns
+    /// `false` and changes nothing. Stored status is unchanged.
     #[private]
     pub fn on_expire_payout(&mut self, token_id: TokenId, amount: NearToken) -> bool {
         self.perform_on_expire_payout(token_id, amount)
@@ -270,8 +282,8 @@ impl Contract {
     }
 
     /// Spec 5.1, 5.4. The full T26 measurement (bytes, cost, and the on-chain
-    /// balance check) is task 003. Unit tests T06, T10, T19, T21, T22, and T36
-    /// check `total_locked` against an independent ledger.
+    /// balance check) is in `integration-tests/`. Unit tests T06, T10, T19,
+    /// T21, T22, and T36 check `total_locked` against an independent ledger.
     pub fn get_storage_info(&self) -> StorageInfo {
         StorageInfo {
             storage_usage: env::storage_usage(),

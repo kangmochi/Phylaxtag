@@ -211,7 +211,12 @@ fn t37_holder_log_full_never_blocks_transfer() {
     mint_default(&mut contract, &mut context);
     let mut owner = issuer();
     for step in 1..=55u64 {
-        let next = account(&format!("t{step}.test"));
+        // Transfers 50..=55 overwrite the short ids already in the ring.
+        let next = if step >= 50 {
+            account_64(step)
+        } else {
+            account(&format!("t{step}.test"))
+        };
         transfer_nft(
             &mut contract,
             &mut context,
@@ -229,7 +234,7 @@ fn t37_holder_log_full_never_blocks_transfer() {
     assert_eq!(history.records.len(), 50);
     assert_eq!(history.records[0].owner, account("t6.test"));
     assert_eq!(history.records[0].since_ns, NOW_NS + 6);
-    assert_eq!(history.records[49].owner, account("t55.test"));
+    assert_eq!(history.records[49].owner, account_64(55));
     assert_eq!(history.records[49].since_ns, NOW_NS + 55);
     assert_eq!(history.records[49].balance_at_transfer, ten_near());
     assert_eq!(
@@ -237,7 +242,7 @@ fn t37_holder_log_full_never_blocks_transfer() {
             .nft_token(TOKEN.to_string())
             .expect("token")
             .owner_id,
-        account("t55.test")
+        account_64(55)
     );
     assert!(contract.get_holder_history("missing".to_string()).is_none());
 }

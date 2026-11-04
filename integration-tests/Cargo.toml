@@ -1,0 +1,16 @@
+[package]
+name = "phylaxtag-integration-tests"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+rust-version = "1.95"
+description = "Sandbox tests for the Phylaxtag warranty contract"
+
+[dependencies]
+anyhow = "1"
+near-primitives = "=0.38.0"
+near-workspaces = { version = "=0.24.0", features = ["experimental"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

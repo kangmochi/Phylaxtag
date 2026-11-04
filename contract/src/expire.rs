@@ -16,18 +16,28 @@ impl Contract {
             .unwrap_or_else(|| env::panic_str("Token not found"));
         require!(env::block_timestamp() >= asset.expiry_ns, "Not yet expired");
 
+        // A refund is already in flight. Leave that attempt alone: no write,
+        // no event, and no second transfer. The outstanding callback still
+        // settles `pending_refund`.
+        if asset.pending_refund.is_some() {
+            return U128(0);
+        }
+
         let amount = asset.balance;
         // A second call with nothing left to send is a no-op: no write, no event.
         if amount.is_zero() && asset.status == WarrantyStatus::Expired {
             return U128(0);
         }
 
+        let first_transition = asset.status != WarrantyStatus::Expired;
         asset.status = WarrantyStatus::Expired;
         let issuer = asset.issuer.clone();
         if amount.is_zero() {
             self.assets.insert(&token_id, &asset);
         } else {
             asset.balance = NearToken::from_yoctonear(0);
+            // Set before the transfer so a repeated callback can see this attempt.
+            asset.pending_refund = Some(amount);
             self.assets.insert(&token_id, &asset);
             self.sub_locked(amount);
             Promise::new(issuer.clone())
@@ -41,8 +51,11 @@ impl Contract {
                 .detach();
         }
 
-        // First close, including a zero balance, and any later refund retry.
-        events::emit_warranty_expired(&token_id, amount, &issuer);
+        if first_transition {
+            events::emit_warranty_expired(&token_id, amount, &issuer);
+        } else {
+            events::emit_expire_refund_retried(&token_id, amount, &issuer);
+        }
         U128(amount.as_yoctonear())
     }
 
@@ -51,14 +64,22 @@ impl Contract {
         token_id: TokenId,
         amount: NearToken,
     ) -> bool {
-        if is_promise_success() {
-            return true;
-        }
-
         let mut asset = self
             .assets
             .get(&token_id)
             .unwrap_or_else(|| env::panic_str("Token not found"));
+        // Only the outstanding attempt is settled. A second call is a no-op
+        // and does not read the promise result.
+        if asset.pending_refund != Some(amount) {
+            return false;
+        }
+        asset.pending_refund = None;
+
+        if is_promise_success() {
+            self.assets.insert(&token_id, &asset);
+            return true;
+        }
+
         asset.balance = asset
             .balance
             .checked_add(amount)

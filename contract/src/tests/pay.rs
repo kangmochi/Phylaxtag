@@ -1,6 +1,6 @@
 //! `pay_service` tests from spec 7.
 
-use near_sdk::{Gas, NearToken, PromiseResult};
+use near_sdk::{NearToken, PromiseResult};
 
 use super::common::*;
 use super::*;
@@ -17,15 +17,17 @@ fn t01_balance_moves_with_nft() {
         two_near(),
         NOW_NS,
     );
-    assert_eq!(callback_gas("on_payout"), vec![Gas::from_tgas(10)]);
-    let paid = event_rows("service_paid");
-    assert_eq!(paid.len(), 1);
-    assert_eq!(paid[0]["token_id"], TOKEN);
-    assert_eq!(paid[0]["owner"], issuer().as_str());
-    assert_eq!(paid[0]["workshop"], workshop().as_str());
-    assert_eq!(paid[0]["amount"], yocto_json(two_near()));
-    assert_eq!(paid[0]["work_type"], "brakes");
-    assert_eq!(paid[0]["note_hash"], NOTE);
+    assert_eq!(callback_gas("on_payout"), vec![crate::CALLBACK_GAS]);
+    let requested = event_rows("service_requested");
+    assert_eq!(requested.len(), 1);
+    assert_eq!(requested[0]["token_id"], TOKEN);
+    assert_eq!(requested[0]["owner"], issuer().as_str());
+    assert_eq!(requested[0]["workshop"], workshop().as_str());
+    assert_eq!(requested[0]["amount"], yocto_json(two_near()));
+    assert_eq!(requested[0]["work_type"], "brakes");
+    assert_eq!(requested[0]["note_hash"], NOTE);
+    assert_eq!(requested[0]["record_index"], 0);
+    assert!(event_rows("service_paid").is_empty());
     assert_eq!(transfers_to(&workshop()), vec![two_near()]);
 
     transfer_nft(&mut contract, &mut context, issuer(), budi(), NOW_NS);
@@ -40,6 +42,15 @@ fn t01_balance_moves_with_nft() {
 
     as_callback(&mut context, NOW_NS, PromiseResult::Successful(Vec::new()));
     assert!(contract.on_payout(TOKEN.to_string(), workshop(), two_near(), 0));
+    let paid = event_rows("service_paid");
+    assert_eq!(paid.len(), 1);
+    assert_eq!(paid[0]["token_id"], TOKEN);
+    assert_eq!(paid[0]["workshop"], workshop().as_str());
+    assert_eq!(paid[0]["amount"], yocto_json(two_near()));
+    assert_eq!(paid[0]["record_index"], 0);
+    assert!(paid[0].get("owner").is_none());
+    assert!(paid[0].get("work_type").is_none());
+    assert!(paid[0].get("note_hash").is_none());
     let history = contract
         .get_service_history(TOKEN.to_string(), None, None)
         .expect("history");
@@ -112,8 +123,8 @@ fn t02_new_owner_pays_after_cooldown() {
 }
 
 #[test]
-#[should_panic(expected = "Not owner")]
-fn t02_missing_token_is_not_owner() {
+#[should_panic(expected = "Token not found")]
+fn t02_missing_token_not_found() {
     let (mut contract, mut context) = setup();
     mint_default(&mut contract, &mut context);
     pay_with(
@@ -181,8 +192,8 @@ fn t04_cap_enforced_exact_cap_succeeds() {
 }
 
 #[test]
-#[should_panic(expected = "Over cap")]
-fn t04_zero_amount_is_over_cap() {
+#[should_panic(expected = "Amount must be > 0")]
+fn t04_zero_amount_rejected() {
     let (mut contract, mut context) = setup();
     mint_default(&mut contract, &mut context);
     pay(

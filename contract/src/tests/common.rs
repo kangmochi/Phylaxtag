@@ -33,6 +33,14 @@ pub(super) fn account(name: &str) -> AccountId {
     name.parse().expect("account id")
 }
 
+/// 64-byte account id: `h{n}` padded with `a`. Used when a ring slot grows.
+pub(super) fn account_64(n: u64) -> AccountId {
+    let head = format!("h{n}");
+    assert!(head.len() <= 64, "prefix fits in an account id");
+    let id = format!("{head}{}", "a".repeat(64 - head.len()));
+    id.parse().expect("64-byte account id")
+}
+
 pub(super) fn alice() -> AccountId {
     account("alice.test")
 }
@@ -267,7 +275,7 @@ pub(super) fn transfers_to(account: &AccountId) -> Vec<NearToken> {
 
 /// Gas on callback receipts created by the call that just ran.
 ///
-/// TODO: measure in task 003. The test locks the 10 TGas reserve, not a measurement.
+/// Prepaid gas on the callback receipt. The figure is `CALLBACK_GAS`.
 pub(super) fn callback_gas(method: &str) -> Vec<Gas> {
     let mut found = Vec::new();
     for receipt in get_created_receipts() {
