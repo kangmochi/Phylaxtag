@@ -1,0 +1,135 @@
+:root {
+  color-scheme: light;
+  --ink: #1c1915;
+  --muted: #4a433a;
+  --paper: #f4efe6;
+  --card: #fffdf8;
+  --line: #d5cbbd;
+  --accent: #7a3412;
+  --banner-bg: #3b2914;
+  --banner-fg: #fff6e8;
+  --focus: #0b57d0;
+  --danger: #7f1d1d;
+  --ok: #0f5c3a;
+  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.45;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+a { color: var(--accent); }
+
+.banner {
+  margin: 0;
+  padding: 0.55rem 1rem;
+  background: var(--banner-bg);
+  color: var(--banner-fg);
+  font-weight: 700;
+}
+
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+}
+
+nav { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+
+.account {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+main {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.card, form, dialog {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+dialog { max-width: 28rem; }
+
+label, .field { display: block; margin: 0.75rem 0; }
+
+input, select, textarea, button {
+  font: inherit;
+  color: var(--ink);
+}
+
+input, select, textarea {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.45rem 0.5rem;
+  border: 1px solid #8d8376;
+  border-radius: 4px;
+  background: #fff;
+}
+
+button, .button {
+  display: inline-block;
+  margin: 0.25rem 0.4rem 0.25rem 0;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: var(--accent);
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+button.secondary, a.button.secondary {
+  background: var(--card);
+  color: var(--accent);
+}
+
+.status {
+  font-weight: 700;
+}
+
+.note { color: var(--muted); }
+
+.alert { color: var(--danger); }
+
+.ok { color: var(--ok); }
+
+ul { padding-left: 1.2rem; }
+
+table { width: 100%; border-collapse: collapse; }
+
+th, td {
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+  padding: 0.35rem;
+  word-break: break-word;
+}
+
+#near-wallet-selector-modal,
+#near-wallet-selector-modal * {
+  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}

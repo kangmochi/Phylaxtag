@@ -21,6 +21,11 @@ out/
 *payload*.json
 submission*.json
 
+# Playwright
+web/playwright-report/
+web/test-results/
+web/blob-report/
+
 # Editor and OS
 .DS_Store
 *.swp

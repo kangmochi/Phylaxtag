@@ -62,3 +62,44 @@ jobs:
       - name: cargo test
         working-directory: integration-tests
         run: cargo test -- --test-threads=1
+
+  web:
+    name: web typecheck, lint, unit, build, e2e
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Install Node.js
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install from the lockfile
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Production build
+        run: npm run build
+
+      - name: Check the production bundle
+        run: npm run check:bundle
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: End-to-end tests
+        run: npm run e2e

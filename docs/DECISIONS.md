@@ -78,3 +78,65 @@ Spec v3.6 settled the task 002 readings (token-not-found order, zero amount, coo
 
 - Spec 5.4 names only the 50 holder records and 50 service records. `last_claim_at_ns` (`None` to `Some`) grows the asset by 8 bytes, and `pending_refund` grows it by 16. The NEP-171 owner is stored again in `owner_by_id` and in the `tokens_per_owner` key, so a longer owner id grows storage by twice the Borsh length delta. The prepay includes both, or a full ring plus a 64-byte owner would break the balance invariant. Suggested fix: add those bytes to the worst-case prepay in 5.4.
 - Spec 5.1 does not say what a second `expire` does while `pending_refund` is still `Some` and a restored balance is waiting. This code returns 0 and leaves state and transfers alone, so the original callback can still restore its amount. Suggested fix: say that `expire` is a no-op while a refund is in flight. `expire_noop_while_refund_in_flight` covers that path.
+
+Spec v3.7 (4 November 2026) closed both of those notes. Section 5.1 now says `expire` returns 0 and does nothing while `pending_refund` is set. Section 5.4 now includes the option-field growth and the longer owner id, and it publishes the measured 1,416 / 299 / 120 byte figures and the 27,218 byte prepay.
+
+## Web app (task 004)
+
+Checked on 4 November 2026 (Asia/Jakarta, UTC+7). Direct dependencies are exact pins in `web/package.json`. `web/package-lock.json` is committed. Node is pinned in `web/.nvmrc` and in `engines`.
+
+| Package | Pinned | License | Purpose |
+| --- | --- | --- | --- |
+| Node.js | 26.13.0 | — | Runtime. Current LTS on the day checked. |
+| vite | 8.3.5 | MIT | Static dev server and production build. |
+| @vitejs/plugin-react | 6.2.1 | MIT | React transform for Vite 8. |
+| react | 19.3.1 | MIT | UI. |
+| react-dom | 19.3.1 | MIT | DOM renderer. |
+| react-router | 8.5.1 | MIT | Client routes. |
+| typescript | 6.0.3 | Apache-2.0 | Typecheck. Newest compiler that day was 7.0.2, which `typescript-eslint` 8.72.1 rejects (`typescript` `>=4.8.4 <6.1.0`). |
+| typescript-eslint | 8.72.1 | MIT | Lint rules for TypeScript. |
+| eslint | 10.14.0 | MIT | Lint. |
+| vitest | 5.1.0 | MIT | Unit tests. |
+| @playwright/test | 1.64.1 | Apache-2.0 | Browser tests for T31, T32, and T38. |
+| @types/react | 19.3.0 | MIT | React types. |
+| @types/react-dom | 19.3.0 | MIT | React DOM types. |
+| @types/node | 26.6.6 | MIT | Node types for the Vite and Playwright configs. |
+| @near-wallet-selector/core | 10.1.4 | MIT OR Apache-2.0 | Testnet wallet connection. The user brings their own wallet. |
+| @near-wallet-selector/modal-ui | 10.1.4 | MIT OR Apache-2.0 | Wallet picker UI. |
+| @near-wallet-selector/my-near-wallet | 10.1.4 | MIT OR Apache-2.0 | MyNearWallet module. |
+| @near-wallet-selector/meteor-wallet | 10.1.4 | MIT OR Apache-2.0 | Meteor wallet module. |
+| @near-js/transactions | 2.5.1 | ISC | `actionCreators.functionCall`. It is not a named export of this package. |
+| buffer | 6.0.3 | MIT | Browser polyfill. Vite 8 does not bundle Node's `buffer`, and the wallet packages need it. |
+
+Apache-2.0 and ISC stay compatible with the MIT project license. CI installs Node with `actions/setup-node` `v7.1.0` (published 8 October 2026).
+
+`npm audit` on this lockfile reported transitive findings. `npm audit fix --force` was not run, because it would move the pins above.
+
+`index.html` sets `globalThis.global = globalThis` in a local inline script. The wallet packages read Node's `global`, and a production page threw `global is not defined` before the wallet modal could open. The production build still warns that `js-sha256` (pulled in by those packages) calls `eval`, and that the wallet chunk is about 1.6 MB. The app source does not call `eval`. Vite also warns that `generate-function` imports Node's `util`. That import stays external. Wallet setup was checked in a browser after the `global` line and the modal opened.
+
+### Mint gas attached by the app
+
+Measured on 4 November 2026 (Asia/Jakarta) on the same sandbox stack as the table above. One mint whose contract receipt logged `nft_mint` and `warranty_funded` burned 3_633_924_445_063 gas (3.634 TGas). Mint has no callback. The temporary measurement test was not kept, so the sandbox suite stays at 8 tests.
+
+The app attaches 15 TGas (`15000000000000`) to `mint`. That is about four times the measured burn. Unused gas is refunded.
+
+`pay_service` and `expire` each schedule the 5 TGas callback. The highest measured pair is about 8.22 TGas (`pay_service` success 3.216 TGas plus a callback under 5 TGas). Spec 8.3 asks for a fixed value well above 10 TGas. The app attaches 30 TGas (`30000000000000`) to `pay_service`, `expire`, and `nft_transfer`. The `nft_transfer` burn was not measured in this task. 30 TGas is the same chosen headroom, not a measured transfer figure.
+
+### Mint deposit estimate
+
+The contract has no quote view (spec open item O10). Before signing, the issuer page shows the fund and this storage estimate, and the sentence "Unused storage deposit is refunded by the contract."
+
+Base, from spec 8.3 / 5.4: 1_416 bytes written by the measured mint plus 27_218 prepaid extra bytes for a 7-character issuer = 28_634 bytes = 0.28634 NEAR, at 10^19 yoctoNEAR per byte.
+
+Margin and adjustments in `web/src/near/deposit.ts`:
+
+- 2_000 extra bytes (0.02 NEAR) for metadata longer than the measured title "E-bike EB-001" (13 bytes) and description "Warranty NFT for one e-bike" (26 bytes). If the form's title, description, and extra field exceed those 2_000 bytes, the longer count replaces the margin. It is not added twice.
+- An issuer id shorter than 7 bytes adds `2 * (7 - length)`, because the owner id is stored twice. A longer issuer is already inside the 27_218 figure.
+- Each workshop after the first adds 4 bytes plus the account id length (Borsh string). The measured mint had one workshop.
+- A token id longer than `EB-001` (6 bytes) adds the extra bytes.
+
+Attached deposit = fund + storage bytes × 10^19. The worst-case record prepay is not refunded. The 1_416 figure was measured with a long sandbox account id, while 27_218 is the prepay for a 7-character issuer. Spec 8.3 adds those two numbers, and the UI follows that sum.
+
+### Test wallet and remote fonts
+
+`VITE_TEST_WALLET=1` is the only switch that resolves the bare specifier `phylaxtag-test-wallet` to the in-memory adapter. A production build resolves it to a module that throws if called. `web/scripts/check-prod-bundle.mjs` fails the build if the marker `PHYLAX_TEST_WALLET_MARKER` or `fonts.googleapis.com` appears in `web/dist`. The wallet modal CSS imports a Google font. A Vite transform removes that import, and the app CSS uses the system font stack. No analytics, trackers, or other remote scripts are loaded. The app talks only to the configured NEAR RPC and to the wallet the user opens.

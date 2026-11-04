@@ -1,0 +1,42 @@
+{
+  "name": "phylaxtag-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": "26.13.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json --noEmit && vite build",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "e2e": "playwright test",
+    "check:bundle": "node scripts/check-prod-bundle.mjs"
+  },
+  "dependencies": {
+    "@near-js/transactions": "2.5.1",
+    "@near-wallet-selector/core": "10.1.4",
+    "@near-wallet-selector/meteor-wallet": "10.1.4",
+    "@near-wallet-selector/modal-ui": "10.1.4",
+    "@near-wallet-selector/my-near-wallet": "10.1.4",
+    "buffer": "6.0.3",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-router": "8.5.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@types/node": "26.6.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.2.1",
+    "eslint": "10.14.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vite": "8.3.5",
+    "vitest": "5.1.0"
+  }
+}

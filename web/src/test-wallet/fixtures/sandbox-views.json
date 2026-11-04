@@ -1,0 +1,69 @@
+{
+  "get_asset": {
+    "asset": {
+      "balance": "10000000000000000000000000",
+      "claim_cap": "3000000000000000000000000",
+      "cooldown_ns": 2592000000000000,
+      "expiry_ns": 1793877585212666944,
+      "holder_next": 1,
+      "holder_total": 1,
+      "issuer": "dev-20261104111943-75200183305811.test.near",
+      "last_claim_at_ns": null,
+      "pending_refund": null,
+      "serial_hash": "45422d3030310000000000000000000000000000000000000000000000000000",
+      "status": "Active",
+      "workshops": [
+        "dev-20261104111943-82893175148566.test.near"
+      ]
+    },
+    "balance": "10000000000000000000000000",
+    "display_status": "Active",
+    "next_claim_ns": null,
+    "owner_id": "dev-20261104111943-75200183305811.test.near",
+    "status": "Active"
+  },
+  "get_holder_history": {
+    "holder_total": 1,
+    "records": [
+      {
+        "balance_at_transfer": "10000000000000000000000000",
+        "owner": "dev-20261104111943-75200183305811.test.near",
+        "since_ns": 1793791185584780905
+      }
+    ]
+  },
+  "get_service_history": [],
+  "get_storage_info": {
+    "contract_balance": "110285660000000000000000000",
+    "storage_usage": 594313,
+    "total_locked": "10000000000000000000000000"
+  },
+  "nft_metadata": {
+    "base_uri": null,
+    "icon": null,
+    "name": "Phylaxtag",
+    "reference": null,
+    "reference_hash": null,
+    "spec": "nft-1.0.0",
+    "symbol": "PHYLAX"
+  },
+  "nft_token": {
+    "approved_account_ids": {},
+    "metadata": {
+      "copies": 1,
+      "description": "Warranty NFT for one e-bike",
+      "expires_at": null,
+      "extra": null,
+      "issued_at": null,
+      "media": null,
+      "media_hash": null,
+      "reference": null,
+      "reference_hash": null,
+      "starts_at": null,
+      "title": "E-bike EB-001",
+      "updated_at": null
+    },
+    "owner_id": "dev-20261104111943-75200183305811.test.near",
+    "token_id": "EB-001"
+  }
+}

@@ -1,0 +1,225 @@
+import { useMemo, useState, type FormEvent } from "react";
+
+import { refundLine } from "../copy";
+import { formatNear, parseNearInput } from "../near/amounts";
+import type { Chain } from "../near/chain";
+import { estimateMintDeposit } from "../near/deposit";
+import { explainError } from "../near/errors";
+import { CALL_GAS, MINT_GAS } from "../near/gas";
+import { randomSaltHex, serialHash } from "../near/hash";
+import { nsFromNow } from "../near/time";
+import type { AssetView } from "../near/types";
+import { normalizeAssetView } from "../near/views";
+import { Field, TxNotice, type TxState } from "../ui";
+
+const DEMO = {
+  tokenId: "EB-001",
+  serial: "FRAME-EB-001",
+  fund: "10",
+  cap: "3",
+  cooldownSeconds: "60",
+  expiryMinutes: "10",
+  workshops: "workshop-a.testnet\nworkshop-b.testnet",
+  title: "E-bike EB-001",
+  description: "Warranty NFT for one e-bike",
+};
+
+export function IssuerPage({
+  chain,
+  accountId,
+  explorer,
+}: {
+  chain: Chain;
+  accountId: string | null;
+  explorer: (hash: string) => string;
+}) {
+  const [salt, setSalt] = useState(randomSaltHex);
+  const [tokenId, setTokenId] = useState(DEMO.tokenId);
+  const [serial, setSerial] = useState(DEMO.serial);
+  const [fund, setFund] = useState(DEMO.fund);
+  const [cap, setCap] = useState(DEMO.cap);
+  const [cooldownSeconds, setCooldownSeconds] = useState("2592000");
+  const [expiryMinutes, setExpiryMinutes] = useState("525600");
+  const [workshopsText, setWorkshopsText] = useState("workshop.test");
+  const [title, setTitle] = useState(DEMO.title);
+  const [description, setDescription] = useState(DEMO.description);
+  const [extra, setExtra] = useState("");
+  const [hashPreview, setHashPreview] = useState("");
+  const [tx, setTx] = useState<TxState>({ kind: "idle" });
+  const [closeId, setCloseId] = useState("EB-001");
+  const [closeAsset, setCloseAsset] = useState<AssetView | null | undefined>(undefined);
+
+  const workshops = workshopsText.split(/\s+/).map((item) => item.trim()).filter(Boolean);
+  const estimate = useMemo(() => {
+    try {
+      return estimateMintDeposit({
+        issuerAccountId: accountId ?? "issuer.test",
+        tokenId,
+        fundNear: fund,
+        title,
+        description,
+        extra,
+        workshops,
+      });
+    } catch {
+      return null;
+    }
+  }, [accountId, tokenId, fund, title, description, extra, workshopsText]);
+
+  async function refreshHash() {
+    setHashPreview(await serialHash(salt, serial));
+  }
+
+  async function mint(event: FormEvent) {
+    event.preventDefault();
+    if (!estimate) {
+      setTx({ kind: "failure", plain: "Enter a NEAR amount such as 10 or 2.5", original: "Enter a NEAR amount such as 10 or 2.5" });
+      return;
+    }
+    setTx({ kind: "waiting" });
+    try {
+      const hashed = await serialHash(salt, serial);
+      setHashPreview(hashed);
+      const result = await chain.call({
+        method: "mint",
+        args: {
+          token_id: tokenId.trim(),
+          serial_hash: hashed,
+          fund_amount: estimate.fundYocto.toString(),
+          expiry: nsFromNow(BigInt(expiryMinutes) * 60_000n),
+          claim_cap: parseNearInput(cap).toString(),
+          cooldown_ns: (BigInt(cooldownSeconds) * 1_000_000_000n).toString(),
+          workshops,
+          metadata: { title, description, extra: extra || null, copies: 1 },
+        },
+        depositYocto: estimate.attachedYocto.toString(),
+        gas: MINT_GAS,
+        onPhase: (phase) => setTx({ kind: phase }),
+      });
+      setTx({ kind: "success", hash: result.hash, detail: `Minted ${tokenId.trim()}.` });
+    } catch (caught) {
+      const raw = caught instanceof Error ? caught.message : String(caught);
+      setTx({ kind: "failure", ...explainError(raw) });
+    }
+  }
+
+  async function loadClose() {
+    setCloseAsset(normalizeAssetView(await chain.view("get_asset", { token_id: closeId.trim() })));
+  }
+
+  async function expire() {
+    setTx({ kind: "waiting" });
+    try {
+      const result = await chain.call({
+        method: "expire",
+        args: { token_id: closeId.trim() },
+        depositYocto: "0",
+        gas: CALL_GAS,
+        onPhase: (phase) => setTx({ kind: phase }),
+      });
+      const returned = typeof result.returnValue === "string" ? result.returnValue : "0";
+      setTx({
+        kind: "success",
+        hash: result.hash,
+        detail: `Returned amount: ${formatNear(returned)}.`,
+      });
+      await loadClose();
+    } catch (caught) {
+      const raw = caught instanceof Error ? caught.message : String(caught);
+      setTx({ kind: "failure", ...explainError(raw) });
+    }
+  }
+
+  const refund = closeAsset ? refundLine(closeAsset.asset.pending_refund) : null;
+
+  return (
+    <article>
+      <h1>Mint a warranty</h1>
+      <p>The serial is salted and hashed in this browser. Only the hash is sent.</p>
+      <form onSubmit={(event) => void mint(event)}>
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => {
+            setTokenId(DEMO.tokenId);
+            setSerial(DEMO.serial);
+            setFund(DEMO.fund);
+            setCap(DEMO.cap);
+            setCooldownSeconds(DEMO.cooldownSeconds);
+            setExpiryMinutes(DEMO.expiryMinutes);
+            setWorkshopsText(DEMO.workshops);
+            setTitle(DEMO.title);
+            setDescription(DEMO.description);
+          }}
+        >
+          Demo mode preset
+        </button>
+        <Field id="token-id" label="Token id">
+          <input id="token-id" value={tokenId} onChange={(event) => setTokenId(event.target.value)} />
+        </Field>
+        <Field id="serial" label="Serial (stays off-chain)">
+          <input id="serial" value={serial} onChange={(event) => setSerial(event.target.value)} />
+        </Field>
+        <Field id="salt" label="Salt (save this; it is not stored on-chain)">
+          <input id="salt" value={salt} onChange={(event) => setSalt(event.target.value)} />
+        </Field>
+        <p>
+          <button type="button" className="secondary" onClick={() => void refreshHash()}>Show serial hash</button>
+        </p>
+        {hashPreview ? <p>serial_hash: {hashPreview}</p> : null}
+        <Field id="fund" label="Fund (NEAR)">
+          <input id="fund" value={fund} onChange={(event) => setFund(event.target.value)} inputMode="decimal" />
+        </Field>
+        <Field id="cap" label="Per-claim cap (NEAR)">
+          <input id="cap" value={cap} onChange={(event) => setCap(event.target.value)} inputMode="decimal" />
+        </Field>
+        <Field id="cooldown" label="Cooldown (seconds)">
+          <input id="cooldown" value={cooldownSeconds} onChange={(event) => setCooldownSeconds(event.target.value)} inputMode="numeric" />
+        </Field>
+        <Field id="expiry" label="Expiry (minutes from now)">
+          <input id="expiry" value={expiryMinutes} onChange={(event) => setExpiryMinutes(event.target.value)} inputMode="numeric" />
+        </Field>
+        <Field id="workshops" label="Workshops (one account id per line)">
+          <textarea id="workshops" value={workshopsText} onChange={(event) => setWorkshopsText(event.target.value)} rows={3} />
+        </Field>
+        <Field id="title" label="Metadata title">
+          <input id="title" value={title} onChange={(event) => setTitle(event.target.value)} />
+        </Field>
+        <Field id="description" label="Metadata description">
+          <input id="description" value={description} onChange={(event) => setDescription(event.target.value)} />
+        </Field>
+        <Field id="extra" label="Metadata extra">
+          <input id="extra" value={extra} onChange={(event) => setExtra(event.target.value)} />
+        </Field>
+        <div className="card" data-testid="deposit-preview">
+          <h2>Deposit preview</h2>
+          {estimate ? (
+            <>
+              <p>Fund: {formatNear(estimate.fundYocto)}</p>
+              <p>Storage deposit (upper estimate, {estimate.storageBytes.toString()} bytes): {formatNear(estimate.storageYocto)}</p>
+              <p>Attached before signing: {formatNear(estimate.attachedYocto)}</p>
+            </>
+          ) : <p>Enter a fund amount to see the deposit.</p>}
+          <p>Unused storage deposit is refunded by the contract. The worst-case record prepay is not refunded.</p>
+        </div>
+        <button type="submit">Mint warranty</button>
+      </form>
+
+      <h2>Close warranty / refund</h2>
+      <Field id="close-id" label="Token id to close">
+        <input id="close-id" value={closeId} onChange={(event) => setCloseId(event.target.value)} />
+      </Field>
+      <button type="button" className="secondary" onClick={() => void loadClose()}>Load warranty</button>
+      {closeAsset === null ? <p>Warranty not found</p> : null}
+      {closeAsset ? (
+        <>
+          <p>Status: <span className="status">{closeAsset.display_status}</span></p>
+          {refund ? <p className="status">{refund}</p> : null}
+          <p>Remaining fund: {formatNear(closeAsset.balance)}</p>
+          <button type="button" onClick={() => void expire()}>Close warranty / refund</button>
+        </>
+      ) : null}
+      <TxNotice tx={tx} explorer={explorer} />
+    </article>
+  );
+}

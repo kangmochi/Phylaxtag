@@ -4,7 +4,7 @@ This e-bike has its own warranty fund. Sell the bike, and the fund and the servi
 
 Phylaxtag turns one physical item (MVP: one e-bike) into a NEP-171 NFT on NEAR. The warranty fund is stored on the token, so it moves with the NFT when the item is sold. The issuer funds it once at mint. The owner can never withdraw it. Phylax (φύλαξ) is Greek for "guardian": the warranty is a guardian that lives on the item and transfers with it.
 
-To our knowledge, a working NFT-warranty implementation on NEAR. This repository is a testnet prototype. The NFT is not proof of authenticity and is not a legal title. The contract can mint a warranty, pay an approved workshop, transfer the NFT, and close it after expiry. Those paths are covered by unit tests and by sandbox tests on a local chain. There is no testnet deploy and no web UI yet, so the flow cannot be tried on a public chain from this repository.
+To our knowledge, a working NFT-warranty implementation on NEAR. This repository is a testnet prototype. The NFT is not proof of authenticity and is not a legal title. The contract can mint a warranty, pay an approved workshop, transfer the NFT, and close it after expiry. Those paths are covered by unit tests and by sandbox tests on a local chain. The web app is in `web/`. There is no testnet deploy yet, and the contract id in the example env is a placeholder, so a public-chain demo still needs a later deploy.
 
 ## How control passes on transfer
 
@@ -14,8 +14,7 @@ To our knowledge, a working NFT-warranty implementation on NEAR. This repository
 4. Transfer clears all NEP-178 approvals, so a marketplace or helper the seller approved loses its right to move the token.
 5. `nft_transfer_call` is disabled, so there is no window where a receiver contract is a temporary owner.
 6. Money can only leave to an approved workshop (never the owner) or to the issuer after expiry. A failed payment returns to the token, so whoever owns the token then benefits, never the old owner.
-
-The holder-only web page is not built yet (task 004). Spec 6.1 point 7 describes that page.
+7. The holder-only web page re-reads `owner_id` from the chain on every load and before every action, so the old owner sees "Only the current holder can open this page" right after the sale.
 
 ## Try it
 
@@ -24,8 +23,9 @@ The holder-only web page is not built yet (task 004). Spec 6.1 point 7 describes
 - Run `cargo fmt --check` in `contract/` and in `integration-tests/` - see no diff. CI runs this.
 - Run `cargo clippy --all-targets -- -D warnings` in `contract/` and in `integration-tests/` - see no warnings. CI runs this.
 - Run `cargo build --target wasm32-unknown-unknown --release` in `contract/` - see `contract/target/wasm32-unknown-unknown/release/phylaxtag.wasm`. The wasm file is gitignored.
-- Deploy to testnet - TODO (task 004).
-- Open a web demo - TODO (task 004). The `web/` directory is a placeholder.
+- Run `npm test` in `web/` - see 7 tests pass.
+- Run the web e2e tests in `web/` - see 3 tests pass.
+- Deploy to testnet - TODO (later). No contract id is deployed from this repository.
 
 ## Build
 
@@ -86,7 +86,7 @@ Also, not spec IDs: `mint_happy_path`, `add_issuer_rejects_non_admin`, `new_reje
 Not in this run:
 
 - T17, T20, the full T26 byte and cost measurement, the T37 storage check, and sandbox repeats of T10, T19, and T22 are in `integration-tests/`. See below.
-- T31, T32, and T38 are web tests. TODO (task 004).
+- T31, T32, and T38 are the three Playwright tests in `web/e2e/web.spec.ts`.
 - T33 is a manual newcomer run.
 
 ## Sandbox tests
@@ -124,12 +124,13 @@ T06, T10, T19, T21, T22, and T36 check one part of the T26 invariant after every
 
 - `contract/` - Rust NEAR contract crate `phylaxtag`
 - `integration-tests/` - sandbox tests (`near-workspaces` 0.24.0). Not used by `contract/`.
-- `web/` - placeholder. Web UI comes in a later task.
-- `docs/phylaxtag-spec-v3.6.pdf` - spec v3.6, DRAFT - not final, the reference, read-only for code agents
+- `web/` - Vite + React + TypeScript app. Read-only pages use RPC view calls. Signing uses NEAR Wallet Selector on testnet.
+- `docs/phylaxtag-spec-v3.7.pdf` - spec v3.7, DRAFT - not final, the reference, read-only for code agents
+- `docs/phylaxtag-spec-v3.6.pdf` - spec v3.6, history
 - `docs/phylaxtag-spec-v3.5.pdf` - spec v3.5, history
 - `docs/phylaxtag-spec-v3.4.pdf` - spec v3.4, history
-- `docs/DECISIONS.md` - pinned crate versions, measured gas, and measured storage
-- `.github/workflows/ci.yml` - contract fmt, clippy, and test, plus the sandbox job, on pull requests and on pushes to `main`
+- `docs/DECISIONS.md` - pinned crate and npm versions, measured gas, and measured storage
+- `.github/workflows/ci.yml` - contract fmt, clippy, and test, the sandbox job, and the web job, on pull requests and on pushes to `main`
 
 ## Status
 
@@ -144,9 +145,11 @@ In this repository now:
 - `nft_transfer_call` always panics with `nft_transfer_call disabled in MVP`
 - Sandbox tests for T10, T17, T19, T20, T22, T26, and T37
 
+The web app has the warranty page, the history page, the issuer page (mint and close), the holder-only page (pay and sell), a workshop payments view, My items, and How it works. It uses only the view and call names in `contract/src/lib.rs`.
+
 Not built yet:
 
-- TODO (task 004): web UI (T31, T32, T38) and testnet deploy. T33 is a manual newcomer run.
+- TODO (later): testnet deploy and a real contract id. T33 is a manual newcomer run.
 
 Callback gas is 5 TGas, from the sandbox measurement in `docs/DECISIONS.md`.
 
@@ -161,9 +164,56 @@ Callback gas is 5 TGas, from the sandbox measurement in `docs/DECISIONS.md`.
 
 Versions, the day they were checked, why they were chosen, and the previous stable fallback are in `docs/DECISIONS.md`.
 
+Web, pinned in `web/package.json` (licenses in `docs/DECISIONS.md`):
+
+- Node.js 26.13.0
+- Vite 8.3.5, React 19.3.1, React DOM 19.3.1, React Router 8.5.1
+- TypeScript 6.0.3, typescript-eslint 8.72.1, ESLint 10.14.0
+- Vitest 5.1.0, Playwright 1.64.1
+- `@near-wallet-selector/core`, `modal-ui`, `my-near-wallet`, and `meteor-wallet` 10.1.4
+- `@near-js/transactions` 2.5.1, `buffer` 6.0.3
+
+## Run the web app locally
+
+Prerequisites: Node.js 26.13.0 (`web/.nvmrc`) and npm. No Rust toolchain is required for the web job. The app never asks for a key or a seed phrase.
+
+```sh
+cd web
+cp .env.example .env
+npm ci
+npm run dev
+```
+
+`web/.env.example` sets `VITE_CONTRACT_ID=your-contract.testnet`, `VITE_RPC_URL=https://rpc.testnet.near.org`, and `VITE_NETWORK_ID=testnet`. Leave `VITE_TEST_WALLET` unset. Open the printed local URL - see the "Testnet demo" banner. Read-only pages call the RPC without a wallet. Connect uses NEAR Wallet Selector on testnet only. A missing env file shows the banner and the config error. It does not start the test wallet.
+
+- Run `npm run typecheck` in `web/` - see no type errors.
+- Run `npm run lint` in `web/` - see no lint errors.
+- Run `npm test` in `web/` - see 7 tests pass.
+- Run `npm run build` and then `npm run check:bundle` in `web/` - see "Production bundle is clean" and no test-wallet marker.
+- Run `npx playwright install chromium` once, then run the web e2e tests in `web/` - see 3 tests pass.
+
+The three browser tests are `T31 gated page access`, `T32 sell button flow`, and `T38 status labels and next claim`. They set `VITE_TEST_WALLET=1`, which is a build flag. That build talks to an in-memory contract and switches account labels. It has no keys. The production build resolves the same import to a disabled module, and `check:bundle` fails if the test marker or a Google Fonts URL is in `web/dist`.
+
+The JSON shapes in `web/src/test-wallet/fixtures/sandbox-views.json` were copied from one local sandbox mint: `get_asset`, `get_service_history`, `get_holder_history`, `get_storage_info`, `nft_token`, and `nft_metadata`. The unit test parses that file as text so the expiry nanoseconds stay exact. The Playwright state is a separate in-memory copy with the same field names and yoctoNEAR strings. A successful sandbox `expire` settles its callback before a test can read `pending_refund`, so the in-flight fixture uses the same yoctoNEAR string encoding as `balance`.
+
+### Deposit shown before mint
+
+The contract has no quote view. For a 7-character issuer and the measured demo metadata, storage is 1,416 bytes written by mint plus 27,218 prepaid bytes = 28,634 bytes = 0.28634 NEAR, at 10^19 yoctoNEAR per byte. The page adds a 2,000 byte margin (0.02 NEAR) for longer metadata. If the title, description, and extra text exceed that margin, the longer count replaces it. A shorter issuer adds two bytes per missing byte, because the owner id is stored twice. Each workshop after the first adds 4 bytes plus the account id length. A token id longer than `EB-001` adds the extra bytes. The attached deposit is the fund plus that storage amount. The page says "Unused storage deposit is refunded by the contract." The worst-case record prepay is not refunded. The formula is `estimateMintDeposit` in `web/src/near/deposit.ts`.
+
+Gas attached by the app, from `web/src/near/gas.ts`: 15 TGas for `mint` (measured burn 3_633_924_445_063 gas) and 30 TGas for `pay_service`, `expire`, and `nft_transfer`. Unused gas is refunded. Details are in `docs/DECISIONS.md`.
+
+## Demo script
+
+About 90 seconds, for the video. A public run needs a deployed testnet contract id, which this task does not create. With `VITE_TEST_WALLET=1` the same screens run locally against the in-memory contract: use the "Demo preset" on the issuer page, then the account buttons `issuer.test`, `alice.test`, and `budi.test`.
+
+1. The issuer opens the issuer page, mints EB-001, and the deposit preview is visible before the wallet opens. It shows the fund and the storage deposit, and it says unused storage deposit is refunded by the contract.
+2. The owner opens the holder page for EB-001, requests a service payment inside the cap, and the workshop is paid. The service record reads Paid.
+3. A claim over the cap is rejected. The page shows "That amount is over the per-claim cap." and the original contract string "Over cap".
+4. Optional: after expiry, close the warranty. While the refund transfer has not settled, the page shows "Refund in flight: X NEAR". The returned amount stays 0 until that transfer finishes.
+
 ## AI disclosure
 
-Code written with Cursor AI agents, reviewed by the team.
+Code written with Cursor AI agents (Cursor Grok 4.7), reviewed by the team. The contract, the sandbox tests, and this web app were produced that way. Library versions are listed above and in `docs/DECISIONS.md`. No other code-generation service was used.
 
 ## License
 
