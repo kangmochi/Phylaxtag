@@ -1,147 +1,13 @@
 //! Mint tests from spec 7: T08, T28, T29, T34, T39, plus `mint_happy_path`.
 //!
-//! T28 and T29 are split into one `#[should_panic]` test per failure. A single
-//! test function cannot assert two different panic strings.
+//! T28 and T29 are split into one `#[should_panic]` test per failure.
 
-use near_contract_standards::non_fungible_token::metadata::TokenMetadata;
-use near_sdk::test_utils::{VMContextBuilder, accounts, get_created_receipts, get_logs};
-use near_sdk::{NearToken, testing_env};
-use near_sdk::{env, mock::MockAction};
+use near_sdk::NearToken;
+use near_sdk::test_utils::{accounts, get_logs};
+use near_sdk::{env, testing_env};
 
+use super::common::*;
 use super::*;
-
-const NOW_NS: u64 = 1_700_000_000_000_000_000;
-const SERIAL: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-
-fn admin() -> AccountId {
-    accounts(1)
-}
-
-fn issuer() -> AccountId {
-    accounts(2)
-}
-
-fn workshop() -> AccountId {
-    accounts(3)
-}
-
-fn stranger() -> AccountId {
-    accounts(4)
-}
-
-fn ten_near() -> NearToken {
-    NearToken::from_near(10)
-}
-
-fn three_near() -> NearToken {
-    NearToken::from_near(3)
-}
-
-fn cushion_deposit() -> NearToken {
-    NearToken::from_near(20)
-}
-
-fn context_for(predecessor: AccountId) -> VMContextBuilder {
-    let mut builder = VMContextBuilder::new();
-    builder
-        .current_account_id(accounts(0))
-        .signer_account_id(predecessor.clone())
-        .predecessor_account_id(predecessor)
-        .block_timestamp(NOW_NS)
-        .account_balance(NearToken::from_near(100));
-    builder
-}
-
-fn sample_metadata() -> TokenMetadata {
-    TokenMetadata {
-        title: Some("E-bike EB-001".to_string()),
-        description: Some("Warranty NFT for one e-bike".to_string()),
-        media: None,
-        media_hash: None,
-        copies: Some(1),
-        issued_at: None,
-        expires_at: None,
-        starts_at: None,
-        updated_at: None,
-        extra: Some(format!(
-            r#"{{"asset_type":"e-bike","serial_hash":"{SERIAL}"}}"#
-        )),
-        reference: None,
-        reference_hash: None,
-    }
-}
-
-struct MintArgs {
-    token_id: String,
-    serial_hash: String,
-    fund_amount: NearToken,
-    expiry: u64,
-    claim_cap: NearToken,
-    cooldown_ns: u64,
-    workshops: Vec<AccountId>,
-    deposit: NearToken,
-    caller: AccountId,
-}
-
-fn valid_args() -> MintArgs {
-    MintArgs {
-        token_id: "EB-001".to_string(),
-        serial_hash: SERIAL.to_string(),
-        fund_amount: ten_near(),
-        expiry: NOW_NS + 86_400_000_000_000,
-        claim_cap: three_near(),
-        cooldown_ns: 2_592_000_000_000_000,
-        workshops: vec![workshop()],
-        deposit: cushion_deposit(),
-        caller: issuer(),
-    }
-}
-
-/// Admin creates the contract and allowlists the issuer.
-fn setup() -> (Contract, VMContextBuilder) {
-    let context = context_for(admin());
-    testing_env!(context.build());
-    let mut contract = Contract::new(admin(), Vec::new());
-    contract.add_issuer(issuer());
-    (contract, context)
-}
-
-fn mint_with(contract: &mut Contract, context: &mut VMContextBuilder, args: MintArgs) -> Token {
-    testing_env!(
-        context
-            .storage_usage(env::storage_usage())
-            .attached_deposit(args.deposit)
-            .predecessor_account_id(args.caller.clone())
-            .signer_account_id(args.caller)
-            .account_balance(NearToken::from_near(100))
-            .build()
-    );
-    contract.mint(
-        args.token_id,
-        args.serial_hash,
-        args.fund_amount,
-        args.expiry,
-        args.claim_cap,
-        args.cooldown_ns,
-        args.workshops,
-        sample_metadata(),
-    )
-}
-
-fn transfers_to(account: &AccountId) -> Vec<NearToken> {
-    let mut amounts = Vec::new();
-    for receipt in get_created_receipts() {
-        if &receipt.receiver_id != account {
-            continue;
-        }
-        for action in receipt.actions {
-            if let MockAction::Transfer { deposit, .. } = action {
-                amounts.push(deposit);
-            }
-        }
-    }
-    amounts
-}
 
 #[test]
 #[should_panic(expected = "Not an approved issuer")]
@@ -216,6 +82,77 @@ fn t29_mint_input_validation_issuer_as_workshop() {
 }
 
 #[test]
+#[should_panic(expected = "Bad workshop list")]
+fn t29_mint_input_validation_duplicate_workshop() {
+    let (mut contract, mut context) = setup();
+    let mut args = valid_args();
+    args.workshops = vec![workshop(), workshop()];
+    mint_with(&mut contract, &mut context, args);
+}
+
+#[test]
+#[should_panic(expected = "Bad token_id")]
+fn t29_mint_input_validation_token_id_empty() {
+    let (mut contract, mut context) = setup();
+    let mut args = valid_args();
+    args.token_id.clear();
+    mint_with(&mut contract, &mut context, args);
+}
+
+#[test]
+#[should_panic(expected = "Bad token_id")]
+fn t29_mint_input_validation_token_id_too_long() {
+    let (mut contract, mut context) = setup();
+    let mut args = valid_args();
+    args.token_id = "e".repeat(33);
+    mint_with(&mut contract, &mut context, args);
+}
+
+#[test]
+#[should_panic(expected = "Bad serial_hash")]
+fn t29_mint_input_validation_serial_hash_short() {
+    let (mut contract, mut context) = setup();
+    let mut args = valid_args();
+    args.serial_hash = "a".repeat(63);
+    mint_with(&mut contract, &mut context, args);
+}
+
+#[test]
+#[should_panic(expected = "Bad serial_hash")]
+fn t29_mint_input_validation_serial_hash_uppercase() {
+    let (mut contract, mut context) = setup();
+    let mut args = valid_args();
+    args.serial_hash = "A".repeat(64);
+    mint_with(&mut contract, &mut context, args);
+}
+
+#[test]
+#[should_panic(expected = "Bad serial_hash")]
+fn t29_mint_input_validation_serial_hash_non_hex() {
+    let (mut contract, mut context) = setup();
+    let mut args = valid_args();
+    args.serial_hash = "g".repeat(64);
+    mint_with(&mut contract, &mut context, args);
+}
+
+#[test]
+fn t29_mint_accepts_boundary_token_ids() {
+    let (mut contract, mut context) = setup();
+    let mut short = valid_args();
+    short.token_id = "e".to_string();
+    short.serial_hash = "b".repeat(64);
+    let token = mint_with(&mut contract, &mut context, short);
+    assert_eq!(token.token_id, "e");
+
+    let mut long = valid_args();
+    long.token_id = "c".repeat(32);
+    long.serial_hash = "c".repeat(64);
+    let token = mint_with(&mut contract, &mut context, long);
+    assert_eq!(token.token_id.len(), 32);
+    assert!(contract.get_asset("c".repeat(32)).is_some());
+}
+
+#[test]
 #[should_panic(expected = "Deposit too small")]
 fn t29_mint_input_validation_deposit_too_small() {
     let (mut contract, mut context) = setup();
@@ -263,7 +200,7 @@ fn mint_happy_path() {
     );
     let storage_before = env::storage_usage();
     let token = contract.mint(
-        "EB-001".to_string(),
+        TOKEN.to_string(),
         SERIAL.to_string(),
         fund,
         expiry,
@@ -284,11 +221,9 @@ fn mint_happy_path() {
     );
 
     assert_eq!(token.owner_id, issuer());
-    assert_eq!(token.token_id, "EB-001");
+    assert_eq!(token.token_id, TOKEN);
 
-    let stored = contract
-        .nft_token("EB-001".to_string())
-        .expect("token view");
+    let stored = contract.nft_token(TOKEN.to_string()).expect("token view");
     assert_eq!(stored.owner_id, issuer());
     assert_eq!(
         stored.metadata.expect("metadata").title,
@@ -296,8 +231,9 @@ fn mint_happy_path() {
     );
     assert_eq!(contract.nft_total_supply(), U128(1));
     assert_eq!(contract.nft_metadata().name, "Phylaxtag");
+    assert_eq!(contract.nft_metadata().symbol, "PHYLAX");
 
-    let view = contract.get_asset("EB-001".to_string()).expect("asset");
+    let view = contract.get_asset(TOKEN.to_string()).expect("asset");
     assert_eq!(view.owner_id, issuer());
     assert_eq!(view.balance, fund);
     assert_eq!(view.asset.balance, fund);
@@ -306,28 +242,29 @@ fn mint_happy_path() {
     assert_eq!(view.asset.expiry_ns, expiry);
     assert_eq!(view.asset.claim_cap, cap);
     assert_eq!(view.asset.cooldown_ns, cooldown);
-    assert_eq!(view.asset.last_claim_at_ns, 0);
+    assert_eq!(view.asset.last_claim_at_ns, None);
     assert_eq!(view.asset.workshops, vec![workshop()]);
     assert_eq!(view.asset.status, WarrantyStatus::Active);
     assert_eq!(view.status, WarrantyStatus::Active);
     assert_eq!(view.display_status, "Active");
-    assert_eq!(view.next_claim_ns, 0);
+    assert_eq!(view.next_claim_ns, None);
     assert_eq!(view.asset.holder_total, 1);
     assert_eq!(view.asset.holder_next, 1);
+
     let holders = contract
-        .holders
-        .get(&"EB-001".to_string())
-        .expect("holder log");
-    assert_eq!(holders.len(), 1);
-    let holder = holders.get(0).expect("mint holder");
-    assert_eq!(holder.owner, issuer());
-    assert_eq!(holder.since_ns, NOW_NS);
-    assert_eq!(holder.balance_at_transfer, fund);
-    let history = contract
-        .history
-        .get(&"EB-001".to_string())
-        .expect("service history");
-    assert_eq!(history.len(), 0);
+        .get_holder_history(TOKEN.to_string())
+        .expect("holders");
+    assert_eq!(holders.holder_total, 1);
+    assert_eq!(holders.records.len(), 1);
+    assert_eq!(holders.records[0].owner, issuer());
+    assert_eq!(holders.records[0].since_ns, NOW_NS);
+    assert_eq!(holders.records[0].balance_at_transfer, fund);
+    assert_eq!(
+        contract
+            .get_service_history(TOKEN.to_string(), None, None)
+            .expect("history"),
+        Vec::<ServiceRecord>::new()
+    );
 
     let info = contract.get_storage_info();
     assert_eq!(info.total_locked, fund);
@@ -349,10 +286,11 @@ fn mint_happy_path() {
         logs.iter().any(|line| line.contains("nft_mint")),
         "{logs:?}"
     );
-    assert!(
-        logs.iter().any(|line| line.contains("warranty_funded")),
-        "{logs:?}"
-    );
+    let funded = event_rows("warranty_funded");
+    assert_eq!(funded.len(), 1);
+    assert_eq!(funded[0]["token_id"], TOKEN);
+    assert_eq!(funded[0]["amount"], yocto_json(fund));
+    assert_eq!(funded[0]["issuer"], issuer().as_str());
 }
 
 #[test]

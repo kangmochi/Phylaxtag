@@ -7,7 +7,7 @@ use near_sdk::collections::Vector;
 use near_sdk::{AccountId, NearToken, Promise, env, require};
 
 use crate::events;
-use crate::types::{Asset, HolderRecord, ServiceRecord, WarrantyStatus};
+use crate::types::{Asset, HolderRecord, ServiceRecord, WarrantyStatus, is_lowercase_hex_64};
 use crate::{Contract, StorageKey};
 
 impl Contract {
@@ -27,6 +27,9 @@ impl Contract {
     ) -> Token {
         let issuer = env::predecessor_account_id();
         require!(self.issuers.contains(&issuer), "Not an approved issuer");
+        // Spec 5.1 writes "1..32 bytes". That is 1 to 32 inclusive, same style as "1..N".
+        require!((1..=32).contains(&token_id.len()), "Bad token_id");
+        require!(is_lowercase_hex_64(&serial_hash), "Bad serial_hash");
         require!(
             self.tokens.owner_by_id.get(&token_id).is_none(),
             "Token exists"
@@ -67,7 +70,7 @@ impl Contract {
             expiry_ns: expiry,
             claim_cap,
             cooldown_ns,
-            last_claim_at_ns: 0,
+            last_claim_at_ns: None,
             workshops,
             status: WarrantyStatus::Active,
             holder_total: 1,
@@ -118,13 +121,17 @@ impl Contract {
     }
 }
 
-/// Spec 5.1: 1..N accounts, none of them the issuer or this contract.
+/// Spec 5.1: 1..N accounts, no duplicates, none of them the issuer or this contract.
 fn workshops_ok(workshops: &[AccountId], issuer: &AccountId) -> bool {
     if workshops.is_empty() {
         return false;
     }
     let contract_id = env::current_account_id();
-    workshops
-        .iter()
-        .all(|workshop| workshop != issuer && workshop != &contract_id)
+    let mut seen = std::collections::HashSet::with_capacity(workshops.len());
+    for workshop in workshops {
+        if workshop == issuer || workshop == &contract_id || !seen.insert(workshop) {
+            return false;
+        }
+    }
+    true
 }

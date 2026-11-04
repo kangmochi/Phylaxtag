@@ -4,13 +4,28 @@
 //! and moves with the NFT when it is sold. The owner cannot withdraw it.
 
 mod events;
+mod expire;
+mod holders;
 mod mint;
+mod pay;
 mod types;
 
 pub use types::{
-    Asset, AssetView, HolderHistoryView, HolderRecord, ServiceRecord, ServiceStatus, StorageInfo,
+    Asset, AssetView, HolderHistory, HolderRecord, ServiceRecord, ServiceStatus, StorageInfo,
     WarrantyStatus,
 };
+
+/// Static gas attached to `on_payout` and `on_expire_payout`.
+///
+/// TODO: measure in task 003. 10 TGas is a reserve so the callback still has
+/// gas after the transfer. It is not a measured figure.
+const CALLBACK_GAS: near_sdk::Gas = near_sdk::Gas::from_tgas(10);
+
+/// Service history stops at 50 records. The 51st `pay_service` fails.
+const HISTORY_LIMIT: u64 = 50;
+
+/// Holder log keeps the latest 50 entries and then overwrites the oldest.
+const HOLDER_LIMIT: u32 = 50;
 
 use near_contract_standards::non_fungible_token::NonFungibleToken;
 use near_contract_standards::non_fungible_token::Token;
@@ -108,7 +123,9 @@ impl Contract {
         self.issuers.insert(&account);
     }
 
-    /// Spec 5.1, 5.4; tests T08, T17, T26, T28, T29, T34, T39.
+    /// Spec 5.1, 5.4; tests T08, T28, T29, T34, T39.
+    ///
+    /// T17 (no `top_up` method) and the full T26 storage measurement are task 003.
     ///
     /// The caller must be an allowlisted issuer and becomes the token owner.
     /// `balance` and `total_locked` both increase by `fund_amount`. Storage is
@@ -140,7 +157,8 @@ impl Contract {
 
     /// Spec 5.1, 5.2; tests T01, T02, T03, T04, T05, T07, T12, T15, T16, T18, T23, T27, T30, T35.
     ///
-    /// Not in this task.
+    /// Deducts the token balance and `total_locked`, appends a Pending record,
+    /// then transfers `amount` to the workshop. `on_payout` settles the record.
     #[payable]
     pub fn pay_service(
         &mut self,
@@ -150,22 +168,22 @@ impl Contract {
         note_hash: String,
         work_type: String,
     ) {
-        let _ = (token_id, workshop, amount, note_hash, work_type);
-        unimplemented!("task 002");
+        self.perform_pay_service(token_id, workshop, amount, note_hash, work_type);
     }
 
     /// Spec 5.1; tests T06, T09, T11, T21, T22, T36.
     ///
-    /// Not in this task. Returns the yoctoNEAR sent back to the issuer.
+    /// Returns the yoctoNEAR sent to the issuer on this call. `0` when there is
+    /// nothing to refund. A failed `on_expire_payout` can put that amount back,
+    /// and a later `expire` sends it again.
     pub fn expire(&mut self, token_id: TokenId) -> U128 {
-        let _ = token_id;
-        unimplemented!("task 003");
+        self.perform_expire(token_id)
     }
 
-    /// Spec 5.1; tests T10, T19, T20, T21.
+    /// Spec 5.1, 5.1a; tests T10, T19, T21. T20 is the sandbox repeat (task 003).
     ///
-    /// TODO: spec 5.1 does not list parameters. These are the values a failed
-    /// payout needs in order to restore the token balance and `total_locked`.
+    /// `true` when the workshop transfer succeeded. `false` restores `amount`
+    /// to the token balance and to `total_locked`.
     #[private]
     pub fn on_payout(
         &mut self,
@@ -173,22 +191,20 @@ impl Contract {
         workshop: AccountId,
         amount: NearToken,
         record_index: u64,
-    ) {
-        let _ = (token_id, workshop, amount, record_index);
-        unimplemented!("task 003");
+    ) -> bool {
+        self.perform_on_payout(token_id, workshop, amount, record_index)
     }
 
-    /// Spec 5.1; tests T22, T36.
+    /// Spec 5.1, 5.1a; tests T22, T36.
     ///
-    /// TODO: spec 5.1 does not list parameters. These are the values a failed
-    /// expiry refund needs in order to restore the token balance and `total_locked`.
+    /// `true` when the issuer received the refund. `false` restores `amount`
+    /// to the token balance and to `total_locked`. Stored status is unchanged.
     #[private]
-    pub fn on_expire_payout(&mut self, token_id: TokenId, amount: NearToken) {
-        let _ = (token_id, amount);
-        unimplemented!("task 003");
+    pub fn on_expire_payout(&mut self, token_id: TokenId, amount: NearToken) -> bool {
+        self.perform_on_expire_payout(token_id, amount)
     }
 
-    /// Spec 5.1; tests T01, T25, T38.
+    /// Spec 5.1, 5.1b; tests T01, T06, T25, T36. T38 is the web check (task 004).
     ///
     /// `None` when the token does not exist.
     pub fn get_asset(&self, token_id: TokenId) -> Option<AssetView> {
@@ -198,35 +214,64 @@ impl Contract {
             owner_id,
             balance: asset.balance,
             status: asset.status,
-            display_status: display_status(&asset),
+            display_status: display_status(&asset, env::block_timestamp()),
             next_claim_ns: next_claim_ns(&asset),
             asset,
         })
     }
 
-    /// Spec 5.1; tests T14, T25.
+    /// Spec 5.1, 5.1a; tests T14, T25.
     ///
-    /// TODO: spec 5.1 names `from` and `limit` without types. This uses the same
-    /// optional index and limit shape as a paginated view. Not filled in this task.
+    /// `from_index` defaults to 0. `limit` defaults to 50 and is capped at 50.
+    /// `None` when the token is missing. An empty page when `from_index` is
+    /// past the end, and when `limit` is 0.
     pub fn get_service_history(
         &self,
         token_id: TokenId,
         from_index: Option<u64>,
         limit: Option<u64>,
-    ) -> Vec<ServiceRecord> {
-        let _ = (token_id, from_index, limit);
-        unimplemented!("task 002");
+    ) -> Option<Vec<ServiceRecord>> {
+        self.assets.get(&token_id)?;
+        let Some(history) = self.history.get(&token_id) else {
+            return Some(Vec::new());
+        };
+        let from = from_index.unwrap_or(0);
+        let page = limit.unwrap_or(HISTORY_LIMIT).min(HISTORY_LIMIT);
+        if from >= history.len() || page == 0 {
+            return Some(Vec::new());
+        }
+        let end = from.saturating_add(page).min(history.len());
+        Some(
+            (from..end)
+                .map(|index| {
+                    history
+                        .get(index)
+                        .unwrap_or_else(|| env::panic_str("history index"))
+                })
+                .collect(),
+        )
     }
 
-    /// Spec 5.1; tests T25, T37.
+    /// Spec 5.1, 5.1a; tests T25, T37.
     ///
-    /// Not in this task.
-    pub fn get_holder_history(&self, token_id: TokenId) -> Option<HolderHistoryView> {
-        let _ = token_id;
-        unimplemented!("task 002");
+    /// Latest 50 holders, oldest first, plus the lifetime counter.
+    /// `None` when the token is missing.
+    pub fn get_holder_history(&self, token_id: TokenId) -> Option<HolderHistory> {
+        let asset = self.assets.get(&token_id)?;
+        let records = self
+            .holders
+            .get(&token_id)
+            .map(|holders| holders::ordered_holders(&holders, asset.holder_next))
+            .unwrap_or_default();
+        Some(HolderHistory {
+            records,
+            holder_total: asset.holder_total,
+        })
     }
 
-    /// Spec 5.1, 5.4; test T26.
+    /// Spec 5.1, 5.4. The full T26 measurement (bytes, cost, and the on-chain
+    /// balance check) is task 003. Unit tests T06, T10, T19, T21, T22, and T36
+    /// check `total_locked` against an independent ledger.
     pub fn get_storage_info(&self) -> StorageInfo {
         StorageInfo {
             storage_usage: env::storage_usage(),
@@ -240,7 +285,8 @@ impl Contract {
 impl NonFungibleTokenCore for Contract {
     /// Spec 5.1, 5.3, 5.6; tests T01, T02, T16, T19, T24, T25, T37.
     ///
-    /// The holder-log wrapper is task 002. This stub does not move the token.
+    /// Moves the token with the standard transfer, which clears approvals,
+    /// then appends a holder-log entry. The log does not change `total_locked`.
     #[payable]
     fn nft_transfer(
         &mut self,
@@ -249,8 +295,9 @@ impl NonFungibleTokenCore for Contract {
         approval_id: Option<u64>,
         memo: Option<String>,
     ) {
-        let _ = (receiver_id, token_id, approval_id, memo);
-        unimplemented!("task 002");
+        self.tokens
+            .nft_transfer(receiver_id.clone(), token_id.clone(), approval_id, memo);
+        self.record_holder(&token_id, receiver_id);
     }
 
     /// Spec 5.1, 5.6; test T13.
@@ -371,8 +418,8 @@ impl NonFungibleTokenEnumeration for Contract {
 impl NonFungibleTokenMetadataProvider for Contract {
     /// Spec 5.6 (NEP-177).
     ///
-    /// Contract-level name and symbol are not in spec 5.3. Returned as constants
-    /// so the stored `Contract` layout stays as specified. See `docs/DECISIONS.md`.
+    /// Contract-level metadata is constant, not stored: name `Phylaxtag`,
+    /// symbol `PHYLAX`, spec `nft-1.0.0`. See `docs/DECISIONS.md`.
     fn nft_metadata(&self) -> NFTContractMetadata {
         NFTContractMetadata {
             spec: NFT_METADATA_SPEC.to_string(),
@@ -383,6 +430,31 @@ impl NonFungibleTokenMetadataProvider for Contract {
             reference: None,
             reference_hash: None,
         }
+    }
+}
+
+impl Contract {
+    pub(crate) fn add_locked(&mut self, amount: NearToken) {
+        self.total_locked = self
+            .total_locked
+            .checked_add(amount)
+            .unwrap_or_else(|| env::panic_str("Fund overflow"));
+    }
+
+    pub(crate) fn sub_locked(&mut self, amount: NearToken) {
+        self.total_locked = self
+            .total_locked
+            .checked_sub(amount)
+            .unwrap_or_else(|| env::panic_str("Fund underflow"));
+    }
+
+    /// Any stored approval means the token is listed. An empty map is not stored.
+    fn token_is_listed(&self, token_id: &TokenId) -> bool {
+        self.tokens
+            .approvals_by_id
+            .as_ref()
+            .and_then(|by_id| by_id.get(token_id))
+            .is_some_and(|approvals| !approvals.is_empty())
     }
 }
 

@@ -1,4 +1,4 @@
-//! Data model from spec 5.3, plus the view structs from spec 5.1.
+//! Data model from spec 5.3, plus the view structs from spec 5.1 and 5.1a.
 
 use near_sdk::AccountId;
 use near_sdk::NearToken;
@@ -6,7 +6,7 @@ use near_sdk::near;
 
 /// Stored warranty status. Display status adds "Empty" and "close pending".
 ///
-/// Spec 5.3.
+/// Spec 5.3. The display mapping, including the clock, is spec 5.1b.
 #[near(serializers = [borsh, json])]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum WarrantyStatus {
@@ -37,8 +37,8 @@ pub struct Asset {
     pub expiry_ns: u64,
     pub claim_cap: NearToken,
     pub cooldown_ns: u64,
-    /// Per token. A transfer does not reset it.
-    pub last_claim_at_ns: u64,
+    /// Per token. A transfer does not reset it. `None` until the first claim.
+    pub last_claim_at_ns: Option<u64>,
     /// Fixed at mint.
     pub workshops: Vec<AccountId>,
     pub status: WarrantyStatus,
@@ -71,8 +71,9 @@ pub struct HolderRecord {
     pub balance_at_transfer: NearToken,
 }
 
-/// `get_asset` payload. Spec 5.1: asset, owner, balance, stored status,
-/// display status, and the next claim time. `None` when the token is missing.
+/// `get_asset` payload. Spec 5.1 and 5.1b.
+///
+/// `None` from the view when the token is missing.
 #[near(serializers = [json])]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AssetView {
@@ -83,22 +84,20 @@ pub struct AssetView {
     /// Stored status (`Active` or `Expired`), separate from `display_status`.
     pub status: WarrantyStatus,
     /// `Active`, `Empty (fund used up)`, `Expired, close pending`, or `Expired`.
-    /// The mapping is recorded in `docs/DECISIONS.md`.
     pub display_status: String,
     /// When the next claim is allowed, in nanoseconds.
-    /// `0` means there has been no claim yet, so a claim is allowed immediately.
-    pub next_claim_ns: u64,
+    /// `None` means there has been no claim yet, so a claim is allowed immediately.
+    pub next_claim_ns: Option<u64>,
 }
 
-/// `get_holder_history` payload. Spec 5.1. Oldest stored entry first.
+/// `get_holder_history` payload. Spec 5.1a.
 ///
-/// TODO: spec 5.1 describes the contents and not a struct name. This shape is the
-/// view task 002 will fill in.
+/// `records` is oldest first, at most 50. `holder_total` counts mint as well.
 #[near(serializers = [json])]
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct HolderHistoryView {
+pub struct HolderHistory {
+    pub records: Vec<HolderRecord>,
     pub holder_total: u32,
-    pub holders: Vec<HolderRecord>,
 }
 
 /// `get_storage_info` payload. Spec 5.1 and 5.4.
@@ -110,21 +109,31 @@ pub struct StorageInfo {
     pub contract_balance: NearToken,
 }
 
-pub(crate) fn display_status(asset: &Asset) -> String {
-    let funded = asset.balance.as_yoctonear() > 0;
-    match (asset.status, funded) {
-        (WarrantyStatus::Active, true) => "Active",
-        (WarrantyStatus::Active, false) => "Empty (fund used up)",
-        (WarrantyStatus::Expired, true) => "Expired, close pending",
-        (WarrantyStatus::Expired, false) => "Expired",
+/// Spec 5.1b. `now_ns` is the block timestamp.
+pub(crate) fn display_status(asset: &Asset, now_ns: u64) -> String {
+    let funded = !asset.balance.is_zero();
+    let past_expiry = now_ns >= asset.expiry_ns;
+    match (asset.status, past_expiry, funded) {
+        (WarrantyStatus::Active, false, true) => "Active",
+        (WarrantyStatus::Active, false, false) => "Empty (fund used up)",
+        (WarrantyStatus::Active, true, _) => "Expired, close pending",
+        (WarrantyStatus::Expired, _, true) => "Expired, close pending",
+        (WarrantyStatus::Expired, _, false) => "Expired",
     }
     .to_string()
 }
 
-pub(crate) fn next_claim_ns(asset: &Asset) -> u64 {
-    if asset.last_claim_at_ns == 0 {
-        0
-    } else {
-        asset.last_claim_at_ns.saturating_add(asset.cooldown_ns)
-    }
+/// Spec 5.1b. `None` before the first claim.
+pub(crate) fn next_claim_ns(asset: &Asset) -> Option<u64> {
+    asset
+        .last_claim_at_ns
+        .map(|last| last.saturating_add(asset.cooldown_ns))
+}
+
+/// Spec 5.1: `serial_hash` and `note_hash` are exactly 64 lowercase hex characters.
+pub(crate) fn is_lowercase_hex_64(value: &str) -> bool {
+    value.len() == 64
+        && value
+            .bytes()
+            .all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f'))
 }
