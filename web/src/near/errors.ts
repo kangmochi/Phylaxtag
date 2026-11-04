@@ -28,18 +28,38 @@ const PANIC_PLAIN: ReadonlyArray<readonly [string, string]> = [
   ["Expired", "This warranty has expired."],
 ];
 
+/**
+ * Markers that mean "this text came from the contract itself". Anything else
+ * (a wallet error, an RPC transport error, a guard) is not the contract talking,
+ * so it must not wear the "Contract said:" label (fix 4).
+ */
+const CONTRACT_MARKERS: readonly string[] = [
+  "Smart contract panicked",
+  "panicked at",
+  "wasm execution failed",
+  "FunctionCallError",
+  "ExecutionError",
+  "ActionError",
+];
+
 export interface ExplainedError {
   plain: string;
   original: string;
+  /** True only when the raw text is a real contract error. */
+  fromContract: boolean;
 }
 
 export function explainError(raw: string): ExplainedError {
   for (const [panic, plain] of PANIC_PLAIN) {
     if (raw.includes(panic)) {
-      return { plain, original: panic };
+      return { plain, original: panic, fromContract: true };
     }
   }
-  return { plain: raw, original: raw };
+  return {
+    plain: raw,
+    original: raw,
+    fromContract: CONTRACT_MARKERS.some((marker) => raw.includes(marker)),
+  };
 }
 
 export const KNOWN_PANICS: readonly string[] = PANIC_PLAIN.map(([panic]) => panic);

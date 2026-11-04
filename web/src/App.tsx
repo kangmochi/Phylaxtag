@@ -7,6 +7,7 @@ import { AssetPage } from "./pages/AssetPage";
 import { HistoryPage } from "./pages/HistoryPage";
 import { HomePage } from "./pages/HomePage";
 import { HowPage } from "./pages/HowPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
 import { IssuerPage } from "./pages/IssuerPage";
 import { OwnerPage } from "./pages/OwnerPage";
 import { WorkshopPage } from "./pages/WorkshopPage";
@@ -31,6 +32,7 @@ export function App({ chain, config }: { chain: Chain; config: AppConfig }) {
           <Route path="/issuer" element={<IssuerPage chain={chain} accountId={accountId} explorer={config.explorerTxUrl} />} />
           <Route path="/workshop" element={<WorkshopPage chain={chain} />} />
           <Route path="/how-it-works" element={<HowPage chain={chain} />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Shell>
     </BrowserRouter>

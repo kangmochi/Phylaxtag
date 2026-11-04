@@ -9,9 +9,25 @@ export function refundLine(pending: string | null): string | null {
   return `Refund in flight: ${formatNear(pending)}`;
 }
 
-/** Spec 8.2. A null clock means a claim is possible now. */
-export function nextClaimText(nextClaimNs: string | null): string {
+/**
+ * Spec 8.2, task B3 and DESIGN FIX 1. Never show a claim time that already passed:
+ * a past clock on an open warranty means a claim is possible now.
+ */
+export function nextClaimText(
+  nextClaimNs: string | null,
+  options: { expired?: boolean; empty?: boolean; nowNs?: bigint } = {},
+): string {
+  if (options.expired) {
+    return "Next claim: expired";
+  }
+  if (options.empty) {
+    return "Next claim: —";
+  }
   if (nextClaimNs === null) {
+    return "Next claim: possible now";
+  }
+  const nowNs = options.nowNs ?? BigInt(Date.now()) * 1_000_000n;
+  if (BigInt(nextClaimNs) <= nowNs) {
     return "Next claim: possible now";
   }
   return `Next claim possible at ${formatTimeNs(nextClaimNs)}`;
@@ -38,3 +54,38 @@ export function serviceOutcome(status: ServiceRecord["status"]): string {
 }
 
 export const GATE_MESSAGE = "Only the current holder can open this page";
+
+/**
+ * Table version of the same rule: the column header already says "Next claim",
+ * so no repeated prefix (DESIGN LEFTOVER 2).
+ */
+export function nextClaimShort(
+  nextClaimNs: string | null,
+  options: { expired?: boolean; empty?: boolean; nowNs?: bigint } = {},
+): string {
+  if (options.expired) {
+    return "expired";
+  }
+  if (options.empty) {
+    return "—";
+  }
+  if (nextClaimNs === null) {
+    return "possible now";
+  }
+  const nowNs = options.nowNs ?? BigInt(Date.now()) * 1_000_000n;
+  if (BigInt(nextClaimNs) <= nowNs) {
+    return "possible now";
+  }
+  return formatTimeNs(nextClaimNs);
+}
+
+/**
+ * DESIGN LEFTOVER 1: a 1-2 character title is placeholder noise, not a name.
+ */
+export function itemName(title: string | null | undefined, tokenId: string): string {
+  const clean = (title ?? "").trim();
+  if (clean.length <= 2) {
+    return `E-bike ${tokenId}`;
+  }
+  return clean;
+}

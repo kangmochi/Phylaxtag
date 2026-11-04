@@ -13,14 +13,14 @@ import { normalizeAssetView } from "../near/views";
 import { Field, TxNotice, type TxState } from "../ui";
 
 const DEMO = {
-  tokenId: "EB-001",
-  serial: "FRAME-EB-001",
+  tokenId: "EB-002",
+  serial: "FRAME-0002",
   fund: "10",
-  cap: "3",
+  cap: "0.3",
   cooldownSeconds: "60",
-  expiryMinutes: "10",
-  workshops: "workshop-a.testnet\nworkshop-b.testnet",
-  title: "E-bike EB-001",
+  expiryMinutes: "43200",
+  workshops: "ws-a.phylaxtag-jiwoo-11041950.testnet\nws-b.phylaxtag-jiwoo-11041950.testnet",
+  title: "E-bike EB-002",
   description: "Warranty NFT for one e-bike",
 };
 
@@ -34,19 +34,20 @@ export function IssuerPage({
   explorer: (hash: string) => string;
 }) {
   const [salt, setSalt] = useState(randomSaltHex);
-  const [tokenId, setTokenId] = useState(DEMO.tokenId);
-  const [serial, setSerial] = useState(DEMO.serial);
-  const [fund, setFund] = useState(DEMO.fund);
-  const [cap, setCap] = useState(DEMO.cap);
-  const [cooldownSeconds, setCooldownSeconds] = useState("2592000");
-  const [expiryMinutes, setExpiryMinutes] = useState("525600");
-  const [workshopsText, setWorkshopsText] = useState("workshop.test");
-  const [title, setTitle] = useState(DEMO.title);
-  const [description, setDescription] = useState(DEMO.description);
+  const [showSalt, setShowSalt] = useState(false);
+  const [tokenId, setTokenId] = useState("");
+  const [serial, setSerial] = useState("");
+  const [fund, setFund] = useState("");
+  const [cap, setCap] = useState("");
+  const [cooldownSeconds, setCooldownSeconds] = useState("");
+  const [expiryMinutes, setExpiryMinutes] = useState("");
+  const [workshopsText, setWorkshopsText] = useState("");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [extra, setExtra] = useState("");
   const [hashPreview, setHashPreview] = useState("");
   const [tx, setTx] = useState<TxState>({ kind: "idle" });
-  const [closeId, setCloseId] = useState("EB-001");
+  const [closeId, setCloseId] = useState("");
   const [closeAsset, setCloseAsset] = useState<AssetView | null | undefined>(undefined);
 
   const workshops = workshopsText.split(/\s+/).map((item) => item.trim()).filter(Boolean);
@@ -73,7 +74,7 @@ export function IssuerPage({
   async function mint(event: FormEvent) {
     event.preventDefault();
     if (!estimate) {
-      setTx({ kind: "failure", plain: "Enter a NEAR amount such as 10 or 2.5", original: "Enter a NEAR amount such as 10 or 2.5" });
+      setTx({ kind: "failure", plain: "Enter a NEAR amount such as 10 or 2.5", original: "Enter a NEAR amount such as 10 or 2.5", fromContract: false });
       return;
     }
     setTx({ kind: "waiting" });
@@ -152,44 +153,58 @@ export function IssuerPage({
             setDescription(DEMO.description);
           }}
         >
-          Demo mode preset
+          Fill demo values
         </button>
         <Field id="token-id" label="Token id">
-          <input id="token-id" value={tokenId} onChange={(event) => setTokenId(event.target.value)} />
+          <input id="token-id" value={tokenId} placeholder="e.g. EB-002" onChange={(event) => setTokenId(event.target.value)} />
         </Field>
         <Field id="serial" label="Serial (stays off-chain)">
-          <input id="serial" value={serial} onChange={(event) => setSerial(event.target.value)} />
+          <input id="serial" value={serial} placeholder="e.g. FRAME-0001" onChange={(event) => setSerial(event.target.value)} />
         </Field>
         <Field id="salt" label="Salt (save this; it is not stored on-chain)">
-          <input id="salt" value={salt} onChange={(event) => setSalt(event.target.value)} />
+          <div className="inline-field">
+            <input
+              id="salt"
+              type={showSalt ? "text" : "password"}
+              value={salt}
+              autoComplete="off"
+              onChange={(event) => setSalt(event.target.value)}
+            />
+            <button type="button" className="secondary" onClick={() => setShowSalt((value) => !value)}>
+              {showSalt ? "Hide" : "Show"}
+            </button>
+            <button type="button" className="secondary" onClick={() => void navigator.clipboard?.writeText(salt)}>
+              Copy
+            </button>
+          </div>
         </Field>
         <p>
           <button type="button" className="secondary" onClick={() => void refreshHash()}>Show serial hash</button>
         </p>
         {hashPreview ? <p>serial_hash: {hashPreview}</p> : null}
         <Field id="fund" label="Fund (NEAR)">
-          <input id="fund" value={fund} onChange={(event) => setFund(event.target.value)} inputMode="decimal" />
+          <input id="fund" placeholder="e.g. 10" value={fund} onChange={(event) => setFund(event.target.value)} inputMode="decimal" />
         </Field>
         <Field id="cap" label="Per-claim cap (NEAR)">
-          <input id="cap" value={cap} onChange={(event) => setCap(event.target.value)} inputMode="decimal" />
+          <input id="cap" placeholder="e.g. 0.3" value={cap} onChange={(event) => setCap(event.target.value)} inputMode="decimal" />
         </Field>
         <Field id="cooldown" label="Cooldown (seconds)">
-          <input id="cooldown" value={cooldownSeconds} onChange={(event) => setCooldownSeconds(event.target.value)} inputMode="numeric" />
+          <input id="cooldown" placeholder="e.g. 60 seconds" value={cooldownSeconds} onChange={(event) => setCooldownSeconds(event.target.value)} inputMode="numeric" />
         </Field>
         <Field id="expiry" label="Expiry (minutes from now)">
-          <input id="expiry" value={expiryMinutes} onChange={(event) => setExpiryMinutes(event.target.value)} inputMode="numeric" />
+          <input id="expiry" placeholder="e.g. 43200 (30 days)" value={expiryMinutes} onChange={(event) => setExpiryMinutes(event.target.value)} inputMode="numeric" />
         </Field>
         <Field id="workshops" label="Workshops (one account id per line)">
-          <textarea id="workshops" value={workshopsText} onChange={(event) => setWorkshopsText(event.target.value)} rows={3} />
+          <textarea id="workshops" placeholder="e.g. ws-a.phylaxtag-jiwoo-11041950.testnet" value={workshopsText} onChange={(event) => setWorkshopsText(event.target.value)} rows={3} />
         </Field>
         <Field id="title" label="Metadata title">
-          <input id="title" value={title} onChange={(event) => setTitle(event.target.value)} />
+          <input id="title" placeholder="e.g. E-bike EB-002" value={title} onChange={(event) => setTitle(event.target.value)} />
         </Field>
         <Field id="description" label="Metadata description">
-          <input id="description" value={description} onChange={(event) => setDescription(event.target.value)} />
+          <input id="description" placeholder="e.g. Warranty for one e-bike" value={description} onChange={(event) => setDescription(event.target.value)} />
         </Field>
         <Field id="extra" label="Metadata extra">
-          <input id="extra" value={extra} onChange={(event) => setExtra(event.target.value)} />
+          <input id="extra" placeholder="optional" value={extra} onChange={(event) => setExtra(event.target.value)} />
         </Field>
         <div className="card" data-testid="deposit-preview">
           <h2>Deposit preview</h2>
@@ -207,7 +222,7 @@ export function IssuerPage({
 
       <h2>Close warranty / refund</h2>
       <Field id="close-id" label="Token id to close">
-        <input id="close-id" value={closeId} onChange={(event) => setCloseId(event.target.value)} />
+        <input id="close-id" placeholder="e.g. EB-001" value={closeId} onChange={(event) => setCloseId(event.target.value)} />
       </Field>
       <button type="button" className="secondary" onClick={() => void loadClose()}>Load warranty</button>
       {closeAsset === null ? <p>Warranty not found</p> : null}

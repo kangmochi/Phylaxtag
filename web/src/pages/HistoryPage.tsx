@@ -7,6 +7,7 @@ import type { Chain } from "../near/chain";
 import { formatTimeNs } from "../near/time";
 import type { HolderHistory, ServiceRecord } from "../near/types";
 import { normalizeHolderHistory, normalizeServiceHistory } from "../near/views";
+import { AccountId, LoadError } from "../ui";
 import { ServiceTable } from "./AssetPage";
 
 export function HistoryPage({ chain }: { chain: Chain }) {
@@ -14,6 +15,8 @@ export function HistoryPage({ chain }: { chain: Chain }) {
   const [services, setServices] = useState<ServiceRecord[] | null>(null);
   const [holders, setHolders] = useState<HolderHistory | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [nonce, setNonce] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -37,10 +40,10 @@ export function HistoryPage({ chain }: { chain: Chain }) {
     return () => {
       cancelled = true;
     };
-  }, [chain, tokenId]);
+  }, [chain, tokenId, nonce]);
 
   if (error) {
-    return <p className="alert" role="alert">{error}</p>;
+    return <LoadError message={error} onRetry={() => setNonce((value) => value + 1)} />;
   }
   if (services === null && holders === null) {
     return <p role="status">Loading history.</p>;
@@ -51,10 +54,16 @@ export function HistoryPage({ chain }: { chain: Chain }) {
 
   return (
     <article>
-      <h1>History for {tokenId}</h1>
-      <p><Link to={`/asset/${tokenId}`}>Back to the warranty</Link></p>
-      <h2>Service payments</h2>
-      <ServiceTable rows={services} />
+      <header className="page-head">
+        <p className="eyebrow">History</p>
+        <h1>History for {tokenId}</h1>
+        <p className="note"><Link to={`/asset/${tokenId}`}>Back to the warranty</Link></p>
+      </header>
+      <section className="card">
+        <h2>Service payments</h2>
+        <ServiceTable rows={services} />
+      </section>
+      <section className="card">
       <h2>Who held it</h2>
       <p>{holderSummary(holders.holder_total)}</p>
       <table>
@@ -68,13 +77,14 @@ export function HistoryPage({ chain }: { chain: Chain }) {
         <tbody>
           {holders.records.map((record, index) => (
             <tr key={`${record.owner}-${index}`}>
-              <td>{record.owner}</td>
-              <td>{formatTimeNs(record.since_ns)}</td>
-              <td>{formatNear(record.balance_at_transfer)}</td>
+              <td data-label="Owner"><AccountId id={record.owner} /></td>
+              <td data-label="Since">{formatTimeNs(record.since_ns)}</td>
+              <td data-label="Fund at transfer">{formatNear(record.balance_at_transfer)}</td>
             </tr>
           ))}
         </tbody>
       </table>
+      </section>
     </article>
   );
 }

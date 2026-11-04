@@ -9,7 +9,7 @@ import { CALL_GAS } from "../near/gas";
 import { formatTimeNs } from "../near/time";
 import type { AssetView, HolderHistory, NftToken, ServiceRecord } from "../near/types";
 import { normalizeAssetView, normalizeHolderHistory, normalizeNftToken, normalizeServiceHistory } from "../near/views";
-import { TxNotice, type TxState } from "../ui";
+import { AccountId, LoadError, TxNotice, rememberToken, type TxState } from "../ui";
 
 export function AssetPage({ chain, explorer }: { chain: Chain; explorer: (hash: string) => string }) {
   const { tokenId = "" } = useParams();
@@ -40,6 +40,9 @@ export function AssetPage({ chain, explorer }: { chain: Chain; explorer: (hash: 
 
   useEffect(() => {
     void load();
+    if (tokenId) {
+      rememberToken(tokenId);
+    }
   }, [tokenId]);
 
   async function closeWarranty() {
@@ -66,7 +69,7 @@ export function AssetPage({ chain, explorer }: { chain: Chain; explorer: (hash: 
   }
 
   if (error) {
-    return <p className="alert" role="alert">{error}</p>;
+    return <LoadError message={error} onRetry={() => void load()} />;
   }
   if (asset === undefined) {
     return <p role="status">Loading warranty.</p>;
@@ -80,23 +83,51 @@ export function AssetPage({ chain, explorer }: { chain: Chain; explorer: (hash: 
 
   return (
     <article>
-      <h1>{nft?.metadata?.title || `Warranty ${tokenId}`}</h1>
-      <p>Issuer: <strong>{asset.asset.issuer}</strong></p>
-      <p>Owner: <span data-testid="owner">{asset.owner_id}</span></p>
-      <p>Status: <span className="status">{asset.display_status}</span></p>
-      {refund ? <p className="status">{refund}</p> : null}
-      <p>Remaining fund: <span data-testid="fund">{formatNear(asset.balance)}</span></p>
-      <p>Per-claim cap: {formatNear(asset.asset.claim_cap)}</p>
-      <p>Cooldown: {formatNearTime(asset.asset.cooldown_ns)}</p>
-      <p>{nextClaimText(asset.next_claim_ns)}</p>
-      <p>Expiry: {formatTimeNs(asset.asset.expiry_ns)}</p>
-      <h2>Allowlisted workshops</h2>
-      <ul>{asset.asset.workshops.map((workshop) => <li key={workshop}>{workshop}</li>)}</ul>
-      <h2>Recent services</h2>
-      <ServiceTable rows={services} />
-      <p><Link to={`/asset/${tokenId}/history`}>Full history</Link></p>
-      <h2>Holders</h2>
-      <p data-testid="holders">{holders ? holderSummary(holders.holder_total) : "No holder log"}</p>
+      <header className="page-head">
+        <p className="eyebrow">Warranty</p>
+        <h1>{nft?.metadata?.title || `Warranty ${tokenId}`}</h1>
+        <p className="lead">
+          <span className="status">{asset.display_status}</span>
+          {" · held by "}
+          <span data-testid="owner"><AccountId id={asset.owner_id} /></span>
+        </p>
+      </header>
+
+      <div className="cols">
+        <section className="card">
+          <h2>Warranty fund</h2>
+          <p className="big" data-testid="fund">{formatNear(asset.balance)}</p>
+          {refund ? <p className="status">{refund}</p> : null}
+          <dl className="kv">
+            <div><dt>Per-claim cap</dt><dd>{formatNear(asset.asset.claim_cap)}</dd></div>
+            <div><dt>Cooldown</dt><dd>{formatNearTime(asset.asset.cooldown_ns)}</dd></div>
+            <div><dt>Expiry</dt><dd>{formatTimeNs(asset.asset.expiry_ns)}</dd></div>
+            <div><dt>Issuer</dt><dd><AccountId id={asset.asset.issuer} /></dd></div>
+          </dl>
+          <p className="note">
+            {nextClaimText(asset.next_claim_ns, { expired: asset.display_status.toLowerCase().includes("expired"), empty: isZero(asset.balance) })}
+          </p>
+        </section>
+
+        <section className="card">
+          <h2>Holders</h2>
+          <p data-testid="holders">{holders ? holderSummary(holders.holder_total) : "No holder log"}</p>
+          <ul className="plain">
+            {holders?.records.slice(0, 8).map((row, index) => (
+              <li key={`${row.owner}-${index}`}><AccountId id={row.owner} /></li>
+            ))}
+          </ul>
+          <h2>Approved workshops</h2>
+          <ul className="plain">{asset.asset.workshops.map((workshop) => <li key={workshop}><AccountId id={workshop} /></li>)}</ul>
+        </section>
+      </div>
+
+      <section className="card">
+        <h2>Recent services</h2>
+        <ServiceTable rows={services} />
+        <p><Link to={`/asset/${tokenId}/history`}>Full history</Link></p>
+      </section>
+
       {canClose ? (
         <p>
           <button type="button" onClick={() => void closeWarranty()}>Close warranty</button>
@@ -108,6 +139,14 @@ export function AssetPage({ chain, explorer }: { chain: Chain; explorer: (hash: 
   );
 }
 
+function isZero(yocto: string): boolean {
+  try {
+    return BigInt(yocto) === 0n;
+  } catch {
+    return false;
+  }
+}
+
 function formatNearTime(ns: string): string {
   const seconds = BigInt(ns) / 1_000_000_000n;
   return `${seconds.toString()} seconds`;
@@ -115,12 +154,13 @@ function formatNearTime(ns: string): string {
 
 export function ServiceTable({ rows }: { rows: ServiceRecord[] }) {
   if (rows.length === 0) {
-    return <p>No service payments yet.</p>;
+    return <p className="note">No service payments yet.</p>;
   }
   return (
     <table>
       <thead>
         <tr>
+          <th>When (UTC)</th>
           <th>Workshop</th>
           <th>Amount</th>
           <th>Type</th>
@@ -130,10 +170,13 @@ export function ServiceTable({ rows }: { rows: ServiceRecord[] }) {
       <tbody>
         {rows.map((row, index) => (
           <tr key={`${row.note_hash}-${index}`}>
-            <td>{row.workshop}</td>
-            <td>{formatNear(row.amount)}</td>
-            <td>{row.work_type}</td>
-            <td>{row.status === "Failed" ? "Payment failed, money returned to the warranty fund" : row.status}</td>
+            <td data-label="When (UTC)">{formatTimeNs(row.timestamp_ns)}</td>
+            <td data-label="Workshop"><AccountId id={row.workshop} /></td>
+            <td data-label="Amount">{formatNear(row.amount)}</td>
+            <td data-label="Type">{row.work_type}</td>
+            <td data-label="Status">
+              {row.status === "Failed" ? "Payment failed, money returned to the warranty fund" : row.status}
+            </td>
           </tr>
         ))}
       </tbody>

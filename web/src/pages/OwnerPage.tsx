@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { useParams } from "react-router";
+import { Link, useParams } from "react-router";
 
 import { GATE_MESSAGE, holderSummary, sellDisclosure, serviceOutcome } from "../copy";
 import { formatNear, parseNearInput } from "../near/amounts";
@@ -102,6 +102,7 @@ export function OwnerPage({
           hash: result.hash,
           plain: serviceOutcome("Failed"),
           original: "Failed",
+          fromContract: false,
         });
         return;
       }
@@ -125,7 +126,7 @@ export function OwnerPage({
       return;
     }
     if (!buyer.trim()) {
-      setTx({ kind: "failure", plain: "Enter the buyer account.", original: "Enter the buyer account." });
+      setTx({ kind: "failure", plain: "Enter the buyer account.", original: "Enter the buyer account.", fromContract: false });
       return;
     }
     const beforeFund = current.balance;
@@ -178,7 +179,17 @@ export function OwnerPage({
   if (!isHolder) {
     return (
       <article>
-        <h1>{GATE_MESSAGE}</h1>
+        <header className="page-head">
+          <p className="eyebrow">Holder page</p>
+          <h1>{GATE_MESSAGE}</h1>
+          <p className="lead">
+            Connect the wallet that holds this warranty to pay a workshop or sell the item.
+          </p>
+        </header>
+        <p className="actions">
+          <button type="button" onClick={() => void chain.connect()}>Connect wallet</button>
+          <Link className="button secondary" to={`/asset/${tokenId}`}>Back to the warranty</Link>
+        </p>
         <SaleNote receipt={receipt} warning={receiptWarning} />
         <TxNotice tx={tx} explorer={explorer} />
       </article>

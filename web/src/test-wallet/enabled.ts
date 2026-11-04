@@ -42,7 +42,7 @@ export function createTestChain(config: AppConfig): Chain {
     async call(request: CallRequest) {
       request.onPhase("waiting");
       if (!accountId) {
-        throw new Error("Connect a test account first.");
+        throw new Error("Connect a test account to continue.");
       }
       request.onPhase("pending");
       const returnValue = fake.call(request.method, request.args, accountId, request.depositYocto);

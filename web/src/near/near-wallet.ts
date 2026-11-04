@@ -52,7 +52,10 @@ export function createNearChain(config: AppConfig): Chain {
   const selector = () => {
     selectorPromise ??= setupWalletSelector({
       network: "testnet",
-      modules: [setupMyNearWallet(), setupMeteorWallet()],
+      modules: [
+        setupMyNearWallet({ walletUrl: "https://testnet.mynearwallet.com" }),
+        setupMeteorWallet(),
+      ],
     });
     return selectorPromise;
   };
@@ -99,7 +102,7 @@ export function createNearChain(config: AppConfig): Chain {
       request.onPhase("waiting");
       const selected = await selector();
       if (!selected.isSignedIn()) {
-        throw new Error("Connect a testnet wallet first.");
+        throw new Error("Connect a testnet wallet to continue.");
       }
       const wallet = await selected.wallet();
       request.onPhase("pending");

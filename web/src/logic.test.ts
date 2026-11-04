@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-import { refundLine, nextClaimText, serviceOutcome } from "./copy";
+import { itemName, nextClaimShort, nextClaimText, refundLine, serviceOutcome } from "./copy";
 import { formatNear, parseNearInput } from "./near/amounts";
 import { estimateMintDeposit } from "./near/deposit";
 import { KNOWN_PANICS, explainError } from "./near/errors";
@@ -44,10 +44,29 @@ describe("status and refund display", () => {
     expect(refundLine(null)).toBeNull();
     expect(refundLine("8000000000000000000000000")).toBe("Refund in flight: 8 NEAR");
     expect(nextClaimText(null)).toBe("Next claim: possible now");
-    expect(nextClaimText("1700000000000000000")).toContain("Next claim possible at ");
+    expect(nextClaimText("1700000000000000000", { nowNs: 1600000000000000000n })).toContain("Next claim possible at ");
+    // DESIGN FIX 1: a clock that already passed must never be shown as a future time.
+    expect(nextClaimText("1700000000000000000", { nowNs: 1800000000000000000n })).toBe("Next claim: possible now");
+    expect(nextClaimText(null, { expired: true })).toBe("Next claim: expired");
+    expect(nextClaimText(null, { empty: true })).toBe("Next claim: —");
+    expect(nextClaimText("1700000000000000000", { expired: true })).toBe("Next claim: expired");
     expect(serviceOutcome("Failed")).toBe("Payment failed, money returned to the warranty fund");
     expect(serviceOutcome("Paid")).toBe("Paid");
     expect(serviceOutcome("Pending")).toBe("Pending");
+    // DESIGN LEFTOVER 2: the table column drops the repeated prefix.
+    expect(nextClaimShort(null)).toBe("possible now");
+    expect(nextClaimShort(null, { expired: true })).toBe("expired");
+    expect(nextClaimShort(null, { empty: true })).toBe("—");
+    expect(nextClaimShort("1700000000000000000", { nowNs: 1800000000000000000n })).toBe("possible now");
+  });
+});
+
+describe("item names", () => {
+  it("falls back to the token pattern for placeholder titles", () => {
+    expect(itemName("x", "EB-003")).toBe("E-bike EB-003");
+    expect(itemName("", "EB-003")).toBe("E-bike EB-003");
+    expect(itemName(null, "EB-001")).toBe("E-bike EB-001");
+    expect(itemName("E-bike EB-001", "EB-001")).toBe("E-bike EB-001");
   });
 });
 
@@ -58,15 +77,27 @@ describe("panic strings", () => {
     expect(explainError("Smart contract panicked: Over cap")).toEqual({
       plain: "That amount is over the per-claim cap.",
       original: "Over cap",
+      fromContract: true,
     });
     expect(explainError("execution failed: Not yet expired")).toEqual({
       plain: "This warranty has not expired yet.",
       original: "Not yet expired",
+      fromContract: true,
     });
+    // Fix 4: an unknown string is not automatically a contract error.
     expect(explainError("something else")).toEqual({
       plain: "something else",
       original: "something else",
+      fromContract: false,
     });
+    expect(explainError("Connect a testnet wallet to continue.").fromContract).toBe(false);
+    expect(explainError("Could not reach the NEAR network. Check your connection, then try again.").fromContract).toBe(false);
+    // A real panic from the contract keeps the label.
+    expect(explainError("Smart contract panicked: something new").fromContract).toBe(true);
+    expect(explainError("wasm execution failed: unknown reason").fromContract).toBe(true);
+    // Unknown wallet and RPC errors must not get the label.
+    expect(explainError("User rejected the request").fromContract).toBe(false);
+    expect(explainError("The NEAR node returned HTTP 500.").fromContract).toBe(false);
   });
 });
 
