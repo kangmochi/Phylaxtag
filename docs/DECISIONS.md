@@ -43,6 +43,8 @@ Checked in `near-contract-standards` 5.30.0. `NonFungibleToken` has no `on_trans
 
 ## Callback gas
 
+History from the default Cargo release profile, before `contract/Cargo.toml` had a `[profile.release]`. The size-profile figures are in the next section. `CALLBACK_GAS` was not changed.
+
 Measured on 4 November 2026 (Asia/Jakarta, UTC+7) against a local sandbox (`near-workspaces` 0.24.0, `near-sandbox` 0.4.0, `near-sdk` 5.30.0, Rust 1.99.1). The number is `gas_burnt` on the receipt whose executor is the contract and whose logs name the event. Gas is in units, not TGas, except the constant.
 
 | Call | Path | Gas burnt (max of the runs) |
@@ -60,6 +62,27 @@ Measured on 4 November 2026 (Asia/Jakarta, UTC+7) against a local sandbox (`near
 
 A caller of `pay_service` or `expire` must attach more than `CALLBACK_GAS` plus the function's own burn (about 3.3 TGas and 2.8 TGas above). The sandbox tests attach 200 TGas.
 
+## Callback gas with the size profile
+
+Measured again on 4 November 2026 (Asia/Jakarta, UTC+7) after `[profile.release]` (`opt-level = "z"`, `lto = true`, `codegen-units = 1`, `panic = "abort"`, `strip = true`, `debug = false`, `overflow-checks = true`). Same sandbox stack and the same rule: `gas_burnt` on the contract receipt whose logs name the event. The wasm the tests loaded was `contract/target/wasm32-unknown-unknown/release/phylaxtag.wasm` from `cargo build --release --target wasm32-unknown-unknown`. `wasm-opt` was not installed, so these figures are not from `wasm-opt`. Each cell is the maximum of the runs printed by the existing sandbox tests.
+
+| Call | Path | Gas burnt (max of the runs) |
+| --- | --- | --- |
+| `pay_service` | success (`service_requested`) | 3_090_846_458_391 |
+| `pay_service` | failure (`service_requested`, workshop account missing) | 3_072_107_003_123 |
+| `on_payout` | success (`service_paid`) | 2_095_407_643_551 |
+| `on_payout` | failure (`payout_failed`) | 2_305_320_286_874 |
+| `expire` | success (`warranty_expired`, refund lands) | 2_545_415_704_641 |
+| `expire` | refund transfer fails, including the retry (`expire_refund_retried`) | 2_546_505_092_403 |
+| `on_expire_payout` | success (no warranty event) | 1_764_294_733_486 |
+| `on_expire_payout` | failure (`expire_refund_failed`) | 1_897_061_232_580 |
+
+The highest callback burn is still the failed `on_payout`, now 2_305_320_286_874 gas (2.305 TGas). Twice that is 4.611 TGas, which is under 5 TGas. `CALLBACK_GAS` stays `Gas::from_tgas(5)`. The margin is 5_000_000_000_000 − 2_305_320_286_874 = 2_694_679_713_126 gas. The constant was not changed.
+
+The same run's mint receipt (`nft_mint` and `warranty_funded`) burned 3_554_608_102_822 gas. That is one run, not a max of several. The web app still attaches 15 TGas to `mint` and 30 TGas to `pay_service`, `expire`, and `nft_transfer`. The highest size-profile pair here is the failed `pay_service` plus the failed `on_payout`, 5_377_427_289_997 gas.
+
+Receipts that logged both `service_requested` and `nft_transfer` are sale-mid-payout transactions. They are not in the `pay_service` row.
+
 ## Storage bytes and cost
 
 Same sandbox run, 4 November 2026 (Asia/Jakarta). `storage_amount_per_byte` from the sandbox protocol config was 10_000_000_000_000_000_000 yoctoNEAR (10^19). One byte costs 0.00001 NEAR.
@@ -72,6 +95,8 @@ Same sandbox run, 4 November 2026 (Asia/Jakarta). `storage_amount_per_byte` from
 
 `WORST_CASE_TOKEN_BYTES` is derived in `contract/src/storage.rs` from Borsh lengths plus the 40-byte trie-node overhead. It is 27_200 bytes: 50 max holder slots and 50 max service slots. For the 7-byte issuer used in the unit tests, `prepaid_extra_bytes` is 27_218. That is the 27_200, minus the holder slot mint already wrote, plus 24 bytes of `Asset` option growth and the owner-id growth from 7 bytes to 64. 27_218 bytes cost 0.27218 NEAR. Mint charges this on top of the bytes it writes. The prepay is not refunded. T26 checks `contract balance ≥ total_locked + storage_usage × storage_byte_cost` after mint, pay success, pay failure, transfer, expire success, and expire refund failure plus retry. The unit test `storage_prepay_covers_full_rings` fills 50 service records and the holder ring, including 64-byte replacements, and checks the same inequality.
 
+The size-profile sandbox run on 4 November 2026 (Asia/Jakarta) printed the same deltas: `bytes_per_mint=1416`, `bytes_per_service_record=299`, `bytes_per_holder_record=120`. The 27_218 byte prepay is unchanged because `contract/src/` is unchanged.
+
 ## Notes for the spec
 
 Spec v3.6 settled the task 002 readings (token-not-found order, zero amount, cooldown restore, idempotent callbacks, `expire` return, `limit = 0`, event names). Two gaps are still open. They are also in the task 003 pull request. The spec file is unchanged.
@@ -83,7 +108,7 @@ Spec v3.7 (4 November 2026) closed both of those notes. Section 5.1 now says `ex
 
 ## Web app (task 004)
 
-Checked on 4 November 2026 (Asia/Jakarta, UTC+7). Direct dependencies are exact pins in `web/package.json`. `web/package-lock.json` is committed. Node is pinned in `web/.nvmrc` and in `engines`.
+Checked on 4 November 2026 (Asia/Jakarta, UTC+7). Direct dependencies are exact pins in `web/package.json`. `web/package-lock.json` is committed. CI installs the Node version in `web/.nvmrc`. `engines.node` is the range below, not that exact patch.
 
 | Package | Pinned | License | Purpose |
 | --- | --- | --- | --- |
@@ -116,11 +141,11 @@ Apache-2.0 and ISC stay compatible with the MIT project license. CI installs Nod
 
 ### Mint gas attached by the app
 
-Measured on 4 November 2026 (Asia/Jakarta) on the same sandbox stack as the table above. One mint whose contract receipt logged `nft_mint` and `warranty_funded` burned 3_633_924_445_063 gas (3.634 TGas). Mint has no callback. The temporary measurement test was not kept, so the sandbox suite stays at 8 tests.
+Measured on 4 November 2026 (Asia/Jakarta) on the default release profile, before `[profile.release]`. One mint whose contract receipt logged `nft_mint` and `warranty_funded` burned 3_633_924_445_063 gas (3.634 TGas). Mint has no callback. The temporary measurement test was not kept, so the sandbox suite stays at 8 tests. The size-profile run later the same day burned 3_554_608_102_822 gas on that receipt.
 
 The app attaches 15 TGas (`15000000000000`) to `mint`. That is about four times the measured burn. Unused gas is refunded.
 
-`pay_service` and `expire` each schedule the 5 TGas callback. The highest measured pair is about 8.22 TGas (`pay_service` success 3.216 TGas plus a callback under 5 TGas). Spec 8.3 asks for a fixed value well above 10 TGas. The app attaches 30 TGas (`30000000000000`) to `pay_service`, `expire`, and `nft_transfer`. The `nft_transfer` burn was not measured in this task. 30 TGas is the same chosen headroom, not a measured transfer figure.
+`pay_service` and `expire` each schedule the 5 TGas callback. Before the size profile, the highest measured pair was about 8.22 TGas (`pay_service` success 3.216 TGas plus a callback under 5 TGas). The size-profile pair is lower, and it is in the section above. Spec 8.3 asks for a fixed value well above 10 TGas. The app attaches 30 TGas (`30000000000000`) to `pay_service`, `expire`, and `nft_transfer`. The `nft_transfer` burn was not measured. 30 TGas is the same chosen headroom, not a measured transfer figure.
 
 ### Mint deposit estimate
 
@@ -140,3 +165,11 @@ Attached deposit = fund + storage bytes × 10^19. The worst-case record prepay i
 ### Test wallet and remote fonts
 
 `VITE_TEST_WALLET=1` is the only switch that resolves the bare specifier `phylaxtag-test-wallet` to the in-memory adapter. A production build resolves it to a module that throws if called. `web/scripts/check-prod-bundle.mjs` fails the build if the marker `PHYLAX_TEST_WALLET_MARKER` or `fonts.googleapis.com` appears in `web/dist`. The wallet modal CSS imports a Google font. A Vite transform removes that import, and the app CSS uses the system font stack. No analytics, trackers, or other remote scripts are loaded. The app talks only to the configured NEAR RPC and to the wallet the user opens.
+
+## Node on Vercel (task 005)
+
+Checked on 4 November 2026 (Asia/Jakarta) against [Vercel’s Node.js versions](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions). The majors available that day were 26.x (the default), 24.x, and 22.x. Node.js 20 had been discontinued for new deployments on 1 October 2026. Vercel selects one major. A range such as `>=22.0.0` is documented to deploy the latest 26.x.
+
+`web/package.json` sets `engines.node` to `>=24`. That is the lowest major this app can state without a minor pin: `react-router` 8.5.1 requires Node `>=22.22`, and ESLint 10.14.0 requires `^22.13` or `>=24`. A Vercel 22.x selection is only the major, so 22 is not the minimum this repo advertises. `>=24` includes 24.x and 26.x. `web/.nvmrc` stays `26.13.0`, which satisfies `>=24`. CI still installs that file through `node-version-file`. No Node package was upgraded.
+
+`web/vercel.json` sets `installCommand` to `npm ci`, `buildCommand` to `npm run build`, and `outputDirectory` to `dist`. The SPA rewrite sends `/(.*)` to `/index.html`. Vercel’s project-configuration docs give the filesystem precedence over rewrites, so a real file in `dist` is not replaced. The Vercel project root has to be `web/` for that file to be the project config. There is no deploy yet.

@@ -35,6 +35,23 @@ From `contract/`, with Rust 1.99.1 (see `rust-toolchain.toml`; rustup installs i
 cargo build --target wasm32-unknown-unknown --release
 ```
 
+`contract/Cargo.toml` sets `[profile.release]` to `opt-level = "z"`, link-time optimisation, one codegen unit, `panic = "abort"`, `strip = true`, and `overflow-checks = true`. Measured on 4 November 2026 (Asia/Jakarta) with that toolchain:
+
+| Build | Wasm bytes | NEAR locked (bytes × 10^19 yoctoNEAR) |
+| --- | --- | --- |
+| Release before that profile | 592_362 | 5.92362 NEAR |
+| Release with that profile | 366_144 | 3.66144 NEAR |
+
+`wasm-opt` was not on the machine, so there is no `wasm-opt -Oz` size. The tests load the Cargo release wasm, not a `wasm-opt` binary. The wasm file is gitignored.
+
+## Deploy to testnet
+
+Not deployed yet. The user deploys with their own accounts and keys. This repository has no key, seed phrase, access token, or contract account.
+
+Build the contract with the command in "Build". The wasm path is `contract/target/wasm32-unknown-unknown/release/phylaxtag.wasm`.
+
+For the web app, set the Vercel project root directory to `web/`. `web/vercel.json` sets the install command to `npm ci`, the build command to `npm run build`, and the output directory to `dist`. It also rewrites every path to `/index.html` after Vercel has checked the filesystem, so a refresh of `/asset/<id>` still loads the app. The router is `BrowserRouter` (browser history, not a hash router), so that rewrite is required. Set `VITE_CONTRACT_ID` in the Vercel environment. `VITE_RPC_URL` and `VITE_NETWORK_ID` are the other build values. `web/.env.example` has placeholders only.
+
 ## Test
 
 ```sh
