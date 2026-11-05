@@ -1229,5 +1229,3 @@ body {
   border-color: rgba(76, 141, 255, 0.45);
   box-shadow: 0 0 0 1px rgba(76, 141, 255, 0.18), 0 18px 40px -26px rgba(76, 141, 255, 0.7);
 }
-
-/* Deploy probe: a real change inside web/ so Vercel has something to build. */
