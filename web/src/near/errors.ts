@@ -1,4 +1,4 @@
-/** Spec 8.4. Longer strings are matched first so one panic is not hidden by a shorter one. */
+/** Longer strings are matched first so one panic is not hidden by a shorter one. */
 
 const PANIC_PLAIN: ReadonlyArray<readonly [string, string]> = [
   // Wallets surface a contract panic as a raw VM trap; nothing else can be read from it.

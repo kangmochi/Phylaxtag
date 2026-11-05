@@ -45,7 +45,7 @@ describe("status and refund display", () => {
     expect(refundLine("8000000000000000000000000")).toBe("Refund in flight: 8 NEAR");
     expect(nextClaimText(null)).toBe("Next claim: possible now");
     expect(nextClaimText("1700000000000000000", { nowNs: 1600000000000000000n })).toContain("Next claim possible at ");
-    // DESIGN FIX 1: a clock that already passed must never be shown as a future time.
+    // A clock that already passed must never be shown as a future time.
     expect(nextClaimText("1700000000000000000", { nowNs: 1800000000000000000n })).toBe("Next claim: possible now");
     expect(nextClaimText(null, { expired: true })).toBe("Next claim: expired");
     expect(nextClaimText(null, { empty: true })).toBe("Next claim: —");
@@ -53,7 +53,7 @@ describe("status and refund display", () => {
     expect(serviceOutcome("Failed")).toBe("Payment failed, money returned to the warranty fund");
     expect(serviceOutcome("Paid")).toBe("Paid");
     expect(serviceOutcome("Pending")).toBe("Pending");
-    // DESIGN LEFTOVER 2: the table column drops the repeated prefix.
+    // The table column drops the repeated prefix.
     expect(nextClaimShort(null)).toBe("possible now");
     expect(nextClaimShort(null, { expired: true })).toBe("expired");
     expect(nextClaimShort(null, { empty: true })).toBe("—");
@@ -84,7 +84,7 @@ describe("panic strings", () => {
       original: "Not yet expired",
       fromContract: true,
     });
-    // Fix 4: an unknown string is not automatically a contract error.
+    // An unknown string is not automatically a contract error.
     expect(explainError("something else")).toEqual({
       plain: "something else",
       original: "something else",

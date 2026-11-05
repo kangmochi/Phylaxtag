@@ -10,7 +10,7 @@ export function refundLine(pending: string | null): string | null {
 }
 
 /**
- * Spec 8.2, task B3 and DESIGN FIX 1. Never show a claim time that already passed:
+ * Never show a claim time that already passed:
  * a past clock on an open warranty means a claim is possible now.
  */
 export function nextClaimText(
@@ -33,7 +33,7 @@ export function nextClaimText(
   return `Next claim possible at ${formatTimeNs(nextClaimNs)}`;
 }
 
-/** Spec 8.5 / S17. The sell dialog always includes this phrase. */
+/** The sell dialog always includes this phrase, so the buyer sees it before signing. */
 export function sellDisclosure(nextClaimNs: string | null): string {
   const when = nextClaimNs === null ? "possible now" : formatTimeNs(nextClaimNs);
   return `A seller can claim just before selling, so check next claim possible at: ${when}.`;
@@ -57,7 +57,7 @@ export const GATE_MESSAGE = "Only the current holder can open this page";
 
 /**
  * Table version of the same rule: the column header already says "Next claim",
- * so no repeated prefix (DESIGN LEFTOVER 2).
+ * so no repeated prefix.
  */
 export function nextClaimShort(
   nextClaimNs: string | null,
@@ -80,7 +80,7 @@ export function nextClaimShort(
 }
 
 /**
- * DESIGN LEFTOVER 1: a 1-2 character title is placeholder noise, not a name.
+ * A 1-2 character title is placeholder noise, not a name.
  */
 export function itemName(title: string | null | undefined, tokenId: string): string {
   const clean = (title ?? "").trim();

@@ -334,7 +334,7 @@ export function rememberToken(tokenId: string): void {
 export const DISCLAIMER =
   "To our knowledge, a working NFT-warranty implementation on NEAR. This is a testnet prototype. The NFT is not proof of authenticity and is not a legal title.";
 
-/** Task A5: a full account id, wrapping, linked to the testnet explorer. */
+/** A full account id, wrapping, linked to the testnet explorer. */
 export function AccountId({ id }: { id: string }) {
   return (
     <a
@@ -385,7 +385,7 @@ export function TxNotice({ tx, explorer }: { tx: TxState; explorer: (hash: strin
   );
 }
 
-/** Task B2: a plain-English message plus a retry button instead of "Failed to fetch". */
+/** A plain-English message plus a retry button instead of "Failed to fetch". */
 export function LoadError({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div className="alert" role="alert">

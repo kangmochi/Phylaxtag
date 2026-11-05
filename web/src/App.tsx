@@ -31,7 +31,7 @@ export function App({ chain, config }: { chain: Chain; config: AppConfig }) {
           <Route path="/asset/:tokenId/owner" element={<OwnerPage chain={chain} accountId={accountId} explorer={config.explorerTxUrl} />} />
           <Route path="/issuer" element={<IssuerPage chain={chain} accountId={accountId} explorer={config.explorerTxUrl} />} />
           <Route path="/workshop" element={<WorkshopPage chain={chain} />} />
-          <Route path="/how-it-works" element={<HowPage chain={chain} />} />
+          <Route path="/how-it-works" element={<HowPage chain={chain} contractId={config.contractId} />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Shell>

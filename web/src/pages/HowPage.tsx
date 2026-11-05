@@ -4,7 +4,7 @@ import { formatNear } from "../near/amounts";
 import type { Chain } from "../near/chain";
 import type { StorageInfo } from "../near/types";
 import { normalizeStorageInfo } from "../near/views";
-import { WalletLogo } from "../ui";
+import { AccountId, WalletLogo } from "../ui";
 import { WALLETS } from "../wallets";
 
 const FUNCTIONS = [
@@ -24,7 +24,7 @@ const FUNCTIONS = [
   "nft_tokens_for_owner",
 ];
 
-export function HowPage({ chain }: { chain: Chain }) {
+export function HowPage({ chain, contractId }: { chain: Chain; contractId: string }) {
   const [info, setInfo] = useState<StorageInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,6 +76,21 @@ export function HowPage({ chain }: { chain: Chain }) {
           <li>There is no keeper and no required off-chain component.</li>
           <li>A seller can claim just before selling. The buyer may have to wait for the next claim. The page shows that time before the sale.</li>
         </ul>
+      </section>
+
+      <section className="card">
+        <h2>Official contract</h2>
+        <p className="note">
+          Only <AccountId id={contractId} /> is this project. A NEAR contract is a public WASM blob on
+          chain, so any copy of this code can be deployed under another account. A copy has a different
+          account id and cannot control these warranties: a token is identified by its contract account
+          plus the token id.
+        </p>
+        <p className="note">
+          To check what is deployed, read the code over RPC (<code>query</code> with{" "}
+          <code>request_type: view_code</code>) and hash the returned bytes. The live contract hashes to{" "}
+          <code>73a8da21…5e8c96</code> (366,256 bytes) at the time of writing.
+        </p>
       </section>
 
       <section className="card">

@@ -59,7 +59,7 @@ const PAGE_SIZE = 50;
 const MAX_TOKENS = 500;
 
 /**
- * Fix 3: keep asking for pages until a short page comes back, so the list is not
+ * Keep asking for pages until a short page comes back, so the list is not
  * silently cut at 50. The cap keeps a demo from hammering the RPC.
  */
 async function collectTokens(

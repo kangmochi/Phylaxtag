@@ -17,7 +17,21 @@ To our knowledge, a working NFT-warranty implementation on NEAR. This repository
 | Earlier token | `EB-004` — 5 claims paid, 0.05 NEAR left, 60 s cooldown |
 | Parent account | `phylaxtag-jiwoo-11041950.testnet` |
 
-Home labels: **All warranties** / **View all**. Wallets: NEAR wallets come first and **Meteor** is the recommended one; **MyNearWallet is retired** for new app connections. EVM wallets (MetaMask, Coinbase Wallet, WalletConnect QR) ship in this repository but the group is hidden unless `VITE_WALLETCONNECT_PROJECT_ID` is set at build time, and **no EVM sign-in has been verified yet**.
+### Official contract
+
+Only `phylaxtag.phylaxtag-jiwoo-11041950.testnet` is this project. The contract code is public by nature: a NEAR contract ships as a WASM blob that anyone can download from the chain, so hiding the source would not prevent a copy. What a copy cannot do is take over these warranties, because a token is identified by its contract account plus `token_id`, and a redeployed copy lives under a different account id.
+
+To check what is actually deployed, read the code over RPC and hash the returned bytes. At the time of writing (5 Nov 2026) this prints `73a8da212590b382d74eb6a1a374af4c8a86330ee7bf51bd90d67b74c65e8c96` for 366,256 bytes:
+
+```bash
+curl -s https://rpc.testnet.fastnear.com -H 'content-type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"query","params":{"request_type":"view_code","finality":"final","account_id":"phylaxtag.phylaxtag-jiwoo-11041950.testnet"}}' \
+  | jq -r .result.code_base64 | base64 -d | sha256sum
+```
+
+Rebuilding `contract/` from this repository should produce a wasm with the same hash while the deployed code and the source stay in step.
+
+Home labels: **All warranties**, **Your side**. Wallets: NEAR wallets come first and **Meteor** is the recommended one; **MyNearWallet is retired** for new app connections. EVM wallets (MetaMask, Coinbase Wallet, WalletConnect QR) ship in this repository but the group is hidden unless `VITE_WALLETCONNECT_PROJECT_ID` is set at build time, and **no EVM sign-in has been verified yet**.
 
 ## How control passes on transfer
 
