@@ -26,8 +26,10 @@ describe("WalletPicker", () => {
     );
     expect(html).toContain("NEAR wallets");
     expect(html.indexOf("Meteor Wallet")).toBeLessThan(html.indexOf("HERE Wallet"));
-    // MyNearWallet is retired: the table still lists it, the picker must not.
-    expect(html).not.toContain("MyNearWallet");
+    // MyNearWallet is retired: it stays visible in the picker as a disabled row
+    // so nobody wonders where it went, but it cannot be chosen.
+    expect(html).toContain("MyNearWallet");
+    expect(html).toMatch(/disabled=""[^>]*>MyNearWallet/);
     expect(html).not.toContain("Other wallets (EVM)");
     expect(html).toContain("Meteor opens a popup window. Allow popups for this site.");
   });
@@ -58,10 +60,10 @@ describe("WalletLogo", () => {
   });
 
   it("renders a neutral badge for a wallet with no official file", () => {
-    const meteor = WALLETS.find((wallet) => wallet.id === "meteor-wallet");
-    if (!meteor) throw new Error("meteor-wallet missing");
-    const html = renderToStaticMarkup(<WalletLogo entry={meteor} />);
+    const bitte = WALLETS.find((wallet) => wallet.id === "bitte-wallet");
+    if (!bitte) throw new Error("bitte-wallet missing");
+    const html = renderToStaticMarkup(<WalletLogo entry={bitte} />);
     expect(html).toContain("wallet-logo-fallback");
-    expect(html).toContain(">M<");
+    expect(html).toContain(">B<");
   });
 });

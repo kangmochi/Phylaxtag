@@ -21,8 +21,10 @@ describe("wallet logos", () => {
   });
 
   it("does not invent logos for wallets without an official file", () => {
-    expect(walletLogo("meteor-wallet")).toBeNull();
     expect(walletLogo("bitte-wallet")).toBeNull();
-    expect(walletInitial({ id: "meteor-wallet", name: "Meteor Wallet" } as never)).toBe("M");
+    expect(walletInitial({ id: "bitte-wallet", name: "Bitte Wallet" } as never)).toBe("B");
+    // Meteor and MyNearWallet ship their own file now.
+    expect(walletLogo("meteor-wallet")).not.toBeNull();
+    expect(walletLogo("my-near-wallet")).not.toBeNull();
   });
 });

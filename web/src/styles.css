@@ -1259,3 +1259,7 @@ body {
 }
 
 /* Wallet strip and card lighting end here. */
+
+/* The strip prints the name next to the mark, so a fallback badge must not
+   repeat the initial. */
+.wallet-chip .wallet-logo-fallback { display: none; }

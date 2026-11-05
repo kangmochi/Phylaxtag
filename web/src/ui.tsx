@@ -6,7 +6,7 @@ import { TEST_ACCOUNTS, testWalletEnabled } from "phylaxtag-test-wallet";
 import type { AppConfig } from "./config";
 import type { Chain } from "./near/chain";
 import type { ExplainedError } from "./near/errors";
-import { METEOR_HINT, detectedInjectedWallet, groupTitle, selectorIdOf, walletGroups, walletProblem, type WalletEntry } from "./wallets";
+import { METEOR_HINT, WALLETS, detectedInjectedWallet, groupTitle, selectorIdOf, walletGroups, walletProblem, type WalletEntry } from "./wallets";
 import { isWideLogo, walletInitial, walletLogo } from "./wallet-logos";
 
 /**
@@ -269,6 +269,9 @@ export function WalletPicker({
   onPick: (entry: WalletEntry) => void;
   onClose: () => void;
 }) {
+  // Retired wallets stay visible but cannot be picked: the provider refuses new
+  // app connections, so a live button would only mislead.
+  const retiredNear = WALLETS.filter((wallet) => wallet.retired && wallet.group === "near" && !wallet.pickerOnly);
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   // Read once per open: which EIP-1193 wallet an "Other wallet" click would hit.
   const detected = detectedInjectedWallet();
@@ -335,6 +338,17 @@ export function WalletPicker({
                 </li>
               );
             })}
+            {groupTitle(group) === "NEAR wallets"
+              ? retiredNear.map((entry) => (
+                  <li key={entry.id}>
+                    <WalletLogo entry={entry} />
+                    <button type="button" className="secondary" disabled>
+                      {entry.name}
+                    </button>
+                    <span className="note"> {entry.how}</span>
+                  </li>
+                ))
+              : null}
           </ul>
         </section>
       ))}

@@ -11,6 +11,8 @@ import hereWallet from "./assets/wallets/here-wallet.svg";
 import intearWallet from "./assets/wallets/intear-wallet.svg";
 import ledger from "./assets/wallets/ledger.png";
 import metamask from "./assets/wallets/metamask.svg";
+import meteorWallet from "./assets/wallets/meteor.png";
+import myNearWallet from "./assets/wallets/mynear-wallet.svg";
 import nightly from "./assets/wallets/nightly.png";
 import sender from "./assets/wallets/sender.png";
 import walletConnect from "./assets/wallets/walletconnect.png";
@@ -19,6 +21,8 @@ import type { WalletEntry } from "./wallets";
 export const WALLET_LOGOS: Readonly<Record<string, string>> = {
   "here-wallet": hereWallet,
   "intear-wallet": intearWallet,
+  "meteor-wallet": meteorWallet,
+  "my-near-wallet": myNearWallet,
   ledger,
   "evm-coinbase": coinbaseWallet,
   "evm-metamask": metamask,

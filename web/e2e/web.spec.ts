@@ -307,7 +307,8 @@ test.describe("wallet picker is a real modal", () => {
 
       await expect(dialog).toContainText("NEAR wallets");
       await expect(dialog).toContainText("Meteor Wallet");
-      await expect(dialog).not.toContainText("MyNearWallet");
+      // Retired wallets stay listed but cannot be picked.
+      await expect(dialog.getByRole("button", { name: "MyNearWallet" })).toBeDisabled();
 
       await page.keyboard.press("Escape");
       await expect(dialog).toHaveCount(0);
@@ -361,7 +362,10 @@ test("the EVM group appears after the NEAR wallets with logos or fallbacks", asy
   // whichever wallet owns window.ethereum is the one that opens.
   await expect(dialog).toContainText("Other wallet");
   await expect(dialog).toContainText("MetaMask, Coinbase Wallet, Phantom, Rabby, Zerion or OKX");
-  expect(await dialog.locator("li").count()).toBe(8);
+  // Seven NEAR wallets plus the retired MyNearWallet row, which stays visible
+  // but disabled, and one EVM entry.
+  expect(await dialog.locator("li").count()).toBe(9);
+  await expect(dialog.getByRole("button", { name: "MyNearWallet" })).toBeDisabled();
 
   // Every row carries a bundled logo or the neutral initial badge.
   const rows = dialog.locator("li");
