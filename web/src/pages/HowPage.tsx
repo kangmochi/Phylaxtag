@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router";
 
 import { formatNear } from "../near/amounts";
 import type { Chain } from "../near/chain";
-import type { StorageInfo } from "../near/types";
-import { normalizeStorageInfo } from "../near/views";
+import type { AssetView, StorageInfo } from "../near/types";
+import { normalizeAssetView, normalizeNftToken, normalizeStorageInfo } from "../near/views";
 import { AccountId, WalletLogo } from "../ui";
 import { WALLETS } from "../wallets";
 
@@ -24,8 +25,64 @@ const FUNCTIONS = [
   "nft_tokens_for_owner",
 ];
 
+/** sha256 of the deployed wasm, read with the RPC view_code method on 5 Nov 2026. */
+const CODE_HASH = "73a8da212590b382d74eb6a1a374af4c8a86330ee7bf51bd90d67b74c65e8c96";
+const CODE_BYTES = "366,256";
+
+const LIMITS: ReadonlyArray<{ title: string; body: string }> = [
+  { title: "Not a product", body: "It runs on NEAR testnet only. No real money, no support, no service level." },
+  { title: "Not a legal title", body: "The NFT does not prove physical authenticity and cannot be used as ownership proof in court." },
+  { title: "The bike link is off-chain", body: "Nothing in the contract knows which physical bike a token belongs to." },
+  {
+    title: "Collusion is possible",
+    body: "An approved workshop and the holder can take money together, within the cap, the cooldown and the expiry.",
+  },
+  { title: "No keeper", body: "Nobody has to run a bot. Expiry, claims and transfers happen when someone calls the contract." },
+  {
+    title: "The seller can claim first",
+    body: "A sale can follow a claim, so the buyer may wait for the next one. The page shows that time before signing.",
+  },
+];
+
+const TECHNIQUE: ReadonlyArray<{ title: string; body: string }> = [
+  {
+    title: "One source of truth",
+    body: "Control is nft_token(token_id).owner_id. Every money-moving action checks predecessor == owner_id at call time, with no session, allowance or per-token key.",
+  },
+  {
+    title: "The fund lives on the token",
+    body: "The balance is a field of the token, not of an account. A transfer changes the owner and nothing else, so the fund, the clock and the service book stay with the item.",
+  },
+  {
+    title: "Approvals are cleared on transfer",
+    body: "NEP-178 approvals are removed, and nft_transfer_call is disabled, so no receiver contract is ever a temporary owner.",
+  },
+  {
+    title: "A failed payout returns to the token",
+    body: "Money can only leave to an approved workshop, or back to the issuer after expiry. Whoever holds the token then benefits, never the previous owner.",
+  },
+  {
+    title: "The holder page re-reads the chain",
+    body: "owner_id is fetched on every load and before every action, so the previous owner sees the gate message right after a sale.",
+  },
+];
+
+/** Cooldown in round units, for the fund line in the diagram. */
+function cooldownText(ns: string): string {
+  try {
+    const seconds = Number(BigInt(ns) / 1_000_000_000n);
+    if (seconds >= 3600) {
+      return `${Math.round(seconds / 3600)}h`;
+    }
+    return `${Math.max(1, Math.round(seconds / 60))}m`;
+  } catch {
+    return "—";
+  }
+}
+
 export function HowPage({ chain, contractId }: { chain: Chain; contractId: string }) {
   const [info, setInfo] = useState<StorageInfo | null>(null);
+  const [sample, setSample] = useState<AssetView | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   function reload() {
@@ -53,67 +110,140 @@ export function HowPage({ chain, contractId }: { chain: Chain; contractId: strin
     };
   }, [chain]);
 
+  // One real warranty, so the diagram shows contract values instead of examples.
+  useEffect(() => {
+    let cancelled = false;
+    void chain.view<unknown[]>("nft_tokens", { from_index: "0", limit: 1 })
+      .then((tokens) => {
+        const token = normalizeNftToken(tokens[0]);
+        if (!token || cancelled) {
+          return undefined;
+        }
+        return chain.view("get_asset", { token_id: token.token_id }).then((raw) => {
+          if (!cancelled) {
+            setSample(normalizeAssetView(raw));
+          }
+        });
+      })
+      .catch(() => {
+        // The diagram falls back to the generic wording below.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [chain]);
+
+  const fundLine = sample
+    ? `${formatNear(sample.balance)} left · ${formatNear(sample.asset.claim_cap)} per claim · ${cooldownText(sample.asset.cooldown_ns)} cooldown`
+    : "A balance inside the NFT, read from the contract";
+
   return (
     <article>
-      <header className="page-head">
+      <header className="page-head how-head">
         <p className="eyebrow">How it works</p>
         <h1>A warranty that travels with the item</h1>
         <p className="lead">
-          A warranty here is a small money pot attached to one item. The maker puts money in, the owner
-          can only pay repair shops from it, and when the item is sold the money and the repair history
-          move to the new owner. Anyone can read the balance and every payment. Money can only go to
-          approved workshops, or back to the issuer after expiry.
+          A warranty is a small money pot attached to one item. The maker funds it, the owner pays repair
+          shops from it, and both the money and the repair history move with the item when it is sold.
         </p>
+        <nav className="jump" aria-label="On this page">
+          <a href="#parties">The four parties</a>
+          <a href="#limits">Honest limits</a>
+          <a href="#contract">Official contract</a>
+          <a href="#technical">Technical details</a>
+          <a href="#try">Try it</a>
+        </nav>
       </header>
 
-      <section className="card">
+      <section className="how-block" id="parties">
+        <h2>The four parties</h2>
+        <p className="how-sub">
+          Money only moves along these arrows. Nothing leaves to the owner, and nothing leaves to a
+          workshop that is not on the list.
+        </p>
+        <div className="flow">
+          <div className="party">
+            <span className="party-step">01 · maker</span>
+            <b>Issuer</b>
+            <p>Mints the warranty and pays the first fund in NEAR, with a per-claim cap and a cooldown.</p>
+          </div>
+          <div className="party is-accent">
+            <span className="party-step">02 · on the token</span>
+            <b>Warranty fund</b>
+            <p>{fundLine}</p>
+          </div>
+          <div className="party">
+            <span className="party-step">03 · approved</span>
+            <b>Workshop</b>
+            <p>Paid straight from the fund by the current holder. Every payment lands in the service book.</p>
+          </div>
+          <div className="party">
+            <span className="party-step">04 · transfer</span>
+            <b>New owner</b>
+            <p>One sale moves the NFT, the remaining fund and the whole history. Nothing is re-issued.</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="how-block" id="limits">
         <h2>Honest limits</h2>
-        <ul>
-          <li>Prototype on NEAR testnet, not a product.</li>
-          <li>The NFT does not prove physical authenticity and is not a legal title.</li>
-          <li>The link between the NFT and the bike is outside the contract.</li>
-          <li>Nobody verifies that the repair really happened. An approved workshop can collude with an owner within the cap, cooldown, and expiry.</li>
-          <li>There is no keeper and no required off-chain component.</li>
-          <li>A seller can claim just before selling. The buyer may have to wait for the next claim. The page shows that time before the sale.</li>
-        </ul>
+        <p className="how-sub">What this prototype does not do, in the order a reviewer would ask.</p>
+        <div className="limits">
+          {LIMITS.map((item) => (
+            <div className="limit" key={item.title}>
+              <h3>{item.title}</h3>
+              <p>{item.body}</p>
+            </div>
+          ))}
+        </div>
       </section>
 
-      <section className="card">
+      <section className="how-block" id="contract">
         <h2>Official contract</h2>
-        <p className="note">
-          Only <AccountId id={contractId} /> is this project. A NEAR contract is a public WASM blob on
-          chain, so any copy of this code can be deployed under another account. A copy has a different
-          account id and cannot control these warranties: a token is identified by its contract account
-          plus the token id.
+        <p className="how-sub">
+          Only this account is the project. A copy of the code can be deployed by anyone; a copy has a
+          different account id and cannot control these warranties, because a token is identified by its
+          contract account plus the token id.
         </p>
-        <p className="note">
-          To check what is deployed, read the code over RPC (<code>query</code> with{" "}
-          <code>request_type: view_code</code>) and hash the returned bytes. The live contract hashes to{" "}
-          <code>73a8da21…5e8c96</code> (366,256 bytes) at the time of writing.
-        </p>
+        <table className="contract-table">
+          <tbody>
+            <tr><th>Network</th><td>NEAR testnet</td></tr>
+            <tr><th>Contract</th><td><AccountId id={contractId} /></td></tr>
+            <tr>
+              <th>Code hash</th>
+              <td>
+                <code>
+                  {CODE_HASH.slice(0, 8)}…{CODE_HASH.slice(-6)}
+                </code>{" "}
+                · {CODE_BYTES} bytes
+              </td>
+            </tr>
+            <tr>
+              <th>How to check</th>
+              <td>
+                Read the code with the RPC <code>query</code> method (<code>view_code</code>) and hash the
+                bytes; the exact command is in the README.
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </section>
 
-      <section className="card">
+      <section className="how-block" id="technical">
         <h2>Technical details</h2>
-        <h3>How control passes on transfer</h3>
-        <ol>
-          <li>There is exactly one source of truth for control: nft_token(token_id).owner_id in the NEP-171 contract.</li>
-          <li>Every money-moving owner action (pay_service) checks predecessor == owner_id at call time. Nothing is cached, and there is no session, allowance, sub-account or access key per token.</li>
-          <li>The warranty fund is a field of the token (Asset.balance), not of any account. A transfer changes owner_id and nothing else, so the fund, service history, cooldown clock and limits stay with the item.</li>
-          <li>Transfer clears all NEP-178 approvals, so a marketplace or helper the seller approved loses its right to move the token.</li>
-          <li>nft_transfer_call is disabled, so there is no window where a receiver contract is a temporary owner.</li>
-          <li>Money can only leave to an approved workshop (never the owner) or to the issuer after expiry. A failed payment returns to the token, so whoever owns the token then benefits, never the old owner.</li>
-          <li>The holder-only web page re-reads owner_id from the chain on every load and before every action, so the old owner sees &quot;Only the current holder can open this page&quot; right after the sale.</li>
-        </ol>
-      </section>
+        <div className="tech">
+          {TECHNIQUE.map((item, index) => (
+            <div className="tech-row" key={item.title}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <p><b>{item.title}.</b> {item.body}</p>
+            </div>
+          ))}
+        </div>
 
-      <section className="card">
-        <h2>Calls this app uses</h2>
-        <ul>{FUNCTIONS.map((name) => <li key={name}><code>{name}</code></li>)}</ul>
-      </section>
+        <h3 className="how-h3">Calls this app uses</h3>
+        <ul className="calls">{FUNCTIONS.map((name) => <li key={name}><code>{name}</code></li>)}</ul>
 
-      <section className="card">
-        <h2>Storage</h2>
+        <h3 className="how-h3">Storage</h3>
         {error ? (
           <div className="alert" role="alert">
             <p>{error}</p>
@@ -121,20 +251,38 @@ export function HowPage({ chain, contractId }: { chain: Chain; contractId: strin
           </div>
         ) : null}
         {info ? (
-          <ul>
-            <li>storage_usage: {info.storage_usage} bytes</li>
-            <li>total_locked: {formatNear(info.total_locked)}</li>
-            <li>contract_balance: {formatNear(info.contract_balance)}</li>
-          </ul>
+          <p className="note">
+            {info.storage_usage} bytes used · {formatNear(info.total_locked)} locked · contract balance{" "}
+            {formatNear(info.contract_balance)}
+          </p>
         ) : <p className="note" role="status">Loading storage info.</p>}
       </section>
 
-      <section className="card">
+      <section className="how-block" id="try">
+        <h2>Try it</h2>
+        <p className="how-sub">Three clicks. The first one does not need a wallet.</p>
+        <div className="try">
+          <Link className="try-link" to="/#all-warranties">
+            <b>Open a warranty →</b>
+            <span>Fund, claim rules and the service book.</span>
+          </Link>
+          <Link className="try-link" to="/workshop">
+            <b>Pay a workshop →</b>
+            <span>Hold a warranty and pay from its fund.</span>
+          </Link>
+          <Link className="try-link" to="/issuer">
+            <b>Mint one →</b>
+            <span>Issuer console: fund, cap, cooldown, allowlist.</span>
+          </Link>
+        </div>
+      </section>
+
+      <section className="how-block" id="wallets">
         <h2>Supported wallets</h2>
-        <p className="note">
-          Verified means someone signed in on NEAR testnet with that wallet and came back to this
-          page with the account shown. Not verified means the wallet is wired into the connect
-          screen but the sign-in has not been run yet; treat it as untested.
+        <p className="how-sub">
+          Verified means someone signed in on NEAR testnet with that wallet and came back to this page
+          with the account shown. Not verified means the wallet is wired into the connect screen but the
+          sign-in has not been run yet; treat it as untested.
         </p>
         <table id="supported-wallets">
           <thead>

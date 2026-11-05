@@ -290,7 +290,7 @@ body {
 /* ---------- cards & forms ---------- */
 
 #root .card, #root form, #root dialog,
-#root article > section:not(.hero):not(.stats):not(.home-block) {
+#root article > section:not(.hero):not(.stats):not(.home-block):not(.how-block) {
   background: var(--bg-soft);
   border: 1px solid transparent;
   border-radius: var(--radius);
@@ -960,4 +960,120 @@ body {
 @media (max-width: 700px) {
   .feed-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: 0.35rem; }
   #root .home-block + .home-block { margin-top: 3rem; padding-top: 2.5rem; }
+}
+
+/* ---------- how it works page ---------- */
+#root .how-head { max-width: 44rem; }
+.jump { display: flex; flex-wrap: wrap; gap: 1.25rem; margin-top: 1.75rem; font-size: 0.875rem; }
+#root .jump a { color: var(--muted); padding-bottom: 0.2rem; border-bottom: 1px solid transparent; }
+#root .jump a:hover { color: var(--text); border-bottom-color: var(--line-strong); }
+
+#root .how-block { padding: 3.5rem 0 0; margin: 3.5rem 0 0; border-top: 1px solid var(--line); }
+#root .how-block h2 { margin-bottom: 0.6rem; }
+.how-sub { color: var(--muted); font-size: 0.9375rem; margin: 0 0 1.75rem; max-width: 44rem; }
+.how-h3 { margin: 2rem 0 0.6rem; font-size: 0.9375rem; font-weight: 500; }
+
+.flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 44px; }
+
+.party {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 150px;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+}
+
+.party.is-accent {
+  border-color: rgba(76, 141, 255, 0.35);
+  background: linear-gradient(180deg, rgba(76, 141, 255, 0.09), rgba(76, 141, 255, 0.02));
+}
+
+.party-step { font-family: var(--mono); font-size: 0.6875rem; color: var(--muted-2); }
+.party b { font-weight: 500; font-size: 1rem; letter-spacing: -0.01em; }
+.party p { margin: 0; color: var(--muted); font-size: 0.8125rem; line-height: 1.5; }
+
+@media (min-width: 1001px) {
+  .party:not(:last-child)::after {
+    content: "→";
+    position: absolute;
+    right: -32px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted-2);
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 1000px) {
+  .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .party { min-height: 0; }
+  .party::after { content: none !important; }
+}
+
+.limits { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+
+.limit { background: var(--bg-soft); border-radius: var(--radius); padding: 1.35rem; }
+.limit h3 { margin: 0 0 0.4rem; font-size: 0.9375rem; }
+.limit p { margin: 0; color: var(--muted); font-size: 0.875rem; line-height: 1.5; }
+
+.tech { display: grid; gap: 10px; max-width: 52rem; }
+
+.tech-row {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 0.85rem;
+  padding: 1rem 1.1rem;
+  border-radius: 14px;
+  background: var(--bg-soft);
+}
+
+.tech-row > span { color: var(--muted-2); font-family: var(--mono); font-size: 0.75rem; }
+.tech-row p { margin: 0; font-size: 0.875rem; color: var(--muted); line-height: 1.55; }
+.tech-row b { color: var(--text); font-weight: 500; }
+
+.calls { display: flex; flex-wrap: wrap; gap: 0.4rem; list-style: none; padding: 0; margin: 0.4rem 0 0; }
+.calls li {
+  margin: 0;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.contract-table th,
+#root .contract-table th {
+  width: 34%;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+  vertical-align: top;
+}
+
+.try { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 1.25rem; }
+
+#root .try-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background: var(--bg-soft);
+  color: var(--text);
+}
+
+#root .try-link:hover { border-color: var(--line); background: #131315; color: var(--text); }
+.try-link b { font-weight: 500; font-size: 0.9375rem; }
+.try-link span { color: var(--muted); font-size: 0.8125rem; }
+
+@media (max-width: 700px) {
+  .limits, .try { grid-template-columns: minmax(0, 1fr); }
+  #root .how-block { padding-top: 2.5rem; margin-top: 2.5rem; }
 }
