@@ -1150,30 +1150,19 @@ body {
 
 /* ---------- base light on every card ---------- */
 /* A permanent, very soft accent so no card reads as dead when the pointer is
-   somewhere else. The pointer spotlight below layers on top of it. */
-.tile, .try-link, .limit, .step, .tech-row, .feed-row {
-  border-color: rgba(76, 141, 255, 0.22);
+   somewhere else. Every selector is scoped under #root so it can beat the
+   component rules (several of them are #root-scoped) without !important, and
+   the styles test keeps .card rules inside the app root. */
+#root .tile, #root .try-link, #root .limit, #root .tech-row,
+#root .step, #root .feed-row, #root .card, #root .panel {
+  border: 1px solid rgba(76, 141, 255, 0.22);
   background-image: linear-gradient(180deg, rgba(76, 141, 255, 0.06), rgba(76, 141, 255, 0.012));
 }
 
-#root .card {
-  border-color: rgba(76, 141, 255, 0.22);
-  background-image: linear-gradient(180deg, rgba(76, 141, 255, 0.06), rgba(76, 141, 255, 0.012));
-}
-
-#root .panel {
-  border-color: rgba(76, 141, 255, 0.24);
-  background-image:
-    linear-gradient(180deg, rgba(76, 141, 255, 0.06), rgba(76, 141, 255, 0.012)),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
-}
-
-.tile:hover, .try-link:hover, .limit:hover, .step:hover, .tech-row:hover {
+#root .tile:hover, #root .try-link:hover, #root .limit:hover, #root .tech-row:hover,
+#root .step:hover, #root .feed-row:hover, #root .card:hover, #root .panel:hover {
   border-color: rgba(76, 141, 255, 0.45);
-}
-
-#root .card:hover, #root .panel:hover {
-  border-color: rgba(76, 141, 255, 0.45);
+  background-image: linear-gradient(180deg, rgba(76, 141, 255, 0.1), rgba(76, 141, 255, 0.03));
 }
 
 /* ---------- pointer spotlight on cards ---------- */
