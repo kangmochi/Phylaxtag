@@ -240,7 +240,7 @@ test("how it works lists the supported wallets with an honest status", async ({ 
   await expect(table).toBeHidden();
   await page.locator(".wallet-details summary").click();
   await expect(table).toBeVisible();
-  await expect(table.locator("tbody tr")).toHaveCount(11);
+  await expect(table.locator("tbody tr")).toHaveCount(10);
   await expect(table).toContainText("MyNearWallet");
   await expect(table).toContainText("Ledger");
   await expect(table).toContainText("MetaMask");
@@ -362,9 +362,9 @@ test("the EVM group appears after the NEAR wallets with logos or fallbacks", asy
   // whichever wallet owns window.ethereum is the one that opens.
   await expect(dialog).toContainText("Other wallet");
   await expect(dialog).toContainText("MetaMask, Coinbase Wallet, Phantom, Rabby, Zerion or OKX");
-  // Seven NEAR wallets plus the retired MyNearWallet row, which stays visible
-  // but disabled, and one EVM entry.
-  expect(await dialog.locator("li").count()).toBe(9);
+  // Six NEAR wallets plus the retired MyNearWallet row, which stays visible
+  // but disabled, and one EVM entry. Bitte Wallet is no longer listed.
+  expect(await dialog.locator("li").count()).toBe(8);
   await expect(dialog.getByRole("button", { name: "MyNearWallet" })).toBeDisabled();
 
   // Every row carries a bundled logo or the neutral initial badge.

@@ -220,7 +220,7 @@ Web, pinned in `web/package.json` (licenses in `docs/DECISIONS.md`):
 - Vite 8.3.5, React 19.3.1, React DOM 19.3.1, React Router 8.5.1
 - TypeScript 6.0.3, typescript-eslint 8.72.1, ESLint 10.14.0
 - Vitest 5.1.0, Playwright 1.64.1
-- `@near-wallet-selector/core`, `modal-ui`, `meteor-wallet`, `here-wallet`, `sender`, `nightly`, `bitte-wallet`, `intear-wallet`, `ledger`, and `my-near-wallet` (retired, hidden from the picker) 10.1.4
+- `@near-wallet-selector/core`, `modal-ui`, `meteor-wallet`, `here-wallet`, `sender`, `nightly`, `intear-wallet`, `ledger`, and `my-near-wallet` (retired, hidden from the picker) 10.1.4
 - `@near-wallet-selector/ethereum-wallets` 10.1.4 with `wagmi` 2.19.5, `@wagmi/core` 2.21.1, `@wagmi/connectors` 5.10.2 (EVM group, hidden unless `VITE_WALLETCONNECT_PROJECT_ID` is set)
 - `@near-js/transactions` 2.5.1, `buffer` 6.0.3
 

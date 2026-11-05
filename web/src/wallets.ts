@@ -73,15 +73,6 @@ export const WALLETS: readonly WalletEntry[] = [
     how: "Needs the Nightly extension or app; pick Testnet inside the wallet.",
   },
   {
-    id: "bitte-wallet",
-    name: "Bitte Wallet",
-    group: "near",
-    kind: "popup",
-    testnetAccount: "not verified",
-    status: "not verified",
-    how: "Opens a Bitte window for the sign-in and returns to this page.",
-  },
-  {
     id: "intear-wallet",
     name: "Intear Wallet",
     group: "near",

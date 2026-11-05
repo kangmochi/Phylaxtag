@@ -60,10 +60,11 @@ describe("WalletLogo", () => {
   });
 
   it("renders a neutral badge for a wallet with no official file", () => {
-    const bitte = WALLETS.find((wallet) => wallet.id === "bitte-wallet");
-    if (!bitte) throw new Error("bitte-wallet missing");
-    const html = renderToStaticMarkup(<WalletLogo entry={bitte} />);
+    // Every listed wallet has an official file, so the fallback is exercised
+    // with a stand-in entry instead of a real wallet.
+    const stand = { id: "stand-in", name: "Stand In Wallet" } as never;
+    const html = renderToStaticMarkup(<WalletLogo entry={stand} />);
     expect(html).toContain("wallet-logo-fallback");
-    expect(html).toContain(">B<");
+    expect(html).toContain(">S<");
   });
 });

@@ -20,11 +20,13 @@ claims no rights and no endorsement.
 
 ## Wallets that use the neutral initial badge instead
 
-No clearly usable official file was found for these in this round, so they show
-a neutral badge with the wallet's initial rather than an invented logo:
+None right now: every listed wallet ships an official file. The neutral badge
+stays in the code for wallets added later without a usable file, rather than
+inventing a logo.
 
-- Bitte Wallet (their site answers 402 / paused from here, so no official file
-  was reachable in this round)
+## Dropped wallets
 
-If the owners publish a press kit or a repo asset with a usable licence, add the
-file here with its source row and map it in `src/wallet-logos.ts`.
+- **Bitte Wallet** — removed from the picker, the strip and the table. Its site
+  answers `402 Payment Required` and the app deployment is paused, so a visitor
+  who picked it could not connect at all. Re-add the entry, the loader in
+  `src/near/near-wallet.ts` and the logo here if the wallet comes back.

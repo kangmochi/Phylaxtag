@@ -41,7 +41,7 @@ function writeStorage(key: string, value: string | null): void {
 }
 
 /**
- * The wallet modules are much heavier than the app (Ledger, Bitte, HERE and the
+ * The wallet modules are much heavier than the app (Ledger, HERE and the
  * NEAR transaction stack together), so they are imported on demand. A visitor
  * who never connects downloads none of it. Each wallet loads on its own: a
  * chunk that fails only removes that wallet, never the whole picker.
@@ -56,14 +56,6 @@ const WALLET_LOADERS: ReadonlyArray<readonly [string, () => Promise<WalletModule
   ["here-wallet", async () => (await import("@near-wallet-selector/here-wallet")).setupHereWallet()],
   ["sender", async () => (await import("@near-wallet-selector/sender")).setupSender()],
   ["nightly", async () => (await import("@near-wallet-selector/nightly")).setupNightly()],
-  [
-    "bitte-wallet",
-    async () => {
-      const mod = await import("@near-wallet-selector/bitte-wallet");
-      // The Bitte factory is typed for InjectedWallet; the selector accepts it.
-      return mod.setupBitteWallet() as unknown as WalletModuleFactory;
-    },
-  ],
   ["intear-wallet", async () => (await import("@near-wallet-selector/intear-wallet")).setupIntearWallet()],
   ["ledger", async () => (await import("@near-wallet-selector/ledger")).setupLedger()],
 ];
