@@ -515,21 +515,36 @@ body {
 
 /* The landing part is text only: it explains the product, then the app starts. */
 #root .hero {
-  display: block;
-  padding: 7rem 0 4rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 2.5rem;
+  align-items: center;
+  padding: 6rem 0 4rem;
   background: transparent;
   border: 0;
   margin: 0;
   border-radius: 0;
+  position: relative;
+  overflow: hidden;
 }
 
-.hero-copy { max-width: 48rem; }
+/* A soft light behind the spotlight card, not a glowing gradient wall. */
+#root .hero::before {
+  content: "";
+  position: absolute;
+  inset: -10% 30% 20% 45%;
+  background: radial-gradient(55% 55% at 60% 45%, rgba(76, 141, 255, 0.14), transparent 72%);
+  filter: blur(14px);
+  pointer-events: none;
+}
+
+.hero-copy { max-width: none; }
 #root .hero-copy h1 {
   font-size: clamp(2.25rem, 5vw, 3.75rem);
   letter-spacing: -0.05em;
   margin-bottom: 1.25rem;
 }
-.hero-lead { color: var(--muted); font-size: 1.0625rem; line-height: 1.55; margin: 0; max-width: 34rem; }
+.hero-lead { color: var(--muted); font-size: 1.0625rem; line-height: 1.55; margin: 0; max-width: 30rem; }
 .hero-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 2rem; }
 .hero-actions .button, .hero-actions button { margin: 0; }
 .hero-fine { margin-top: 1.75rem; color: var(--muted-2); font-size: 0.75rem; }
@@ -816,7 +831,7 @@ body {
 .panel {
   position: relative;
   width: 100%;
-  max-width: 30rem;
+  max-width: none;
   border: 1px solid var(--line);
   border-radius: 24px;
   padding: 1.35rem 1.4rem 1.4rem;
