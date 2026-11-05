@@ -10,7 +10,7 @@ export default defineConfig({
   webServer: {
     command: "npm run dev -- --host 127.0.0.1 --port 4173 --strictPort",
     url: "http://127.0.0.1:4173",
-    env: { VITE_TEST_WALLET: "1" },
+    env: { VITE_TEST_WALLET: "1", VITE_WALLETCONNECT_PROJECT_ID: "test-project-id" },
     reuseExistingServer: false,
   },
 });

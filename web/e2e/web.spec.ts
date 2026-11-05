@@ -99,6 +99,9 @@ test("issuer page hides the mint form until a wallet is connected", async ({ pag
   await expect(page.getByRole("button", { name: "Fill demo values" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "Connect wallet" }).click();
+  const picker = page.getByTestId("wallet-picker");
+  await expect(picker).toBeVisible();
+  await picker.getByRole("button", { name: "Meteor Wallet" }).click();
   await expect(page.locator("#token-id")).toBeVisible();
   await expect(page.getByRole("button", { name: "Mint warranty" })).toBeVisible();
   await expect(page.getByText("Only accounts on the issuer allowlist can mint.")).toBeVisible();
@@ -227,4 +230,142 @@ test("the claim form states the real cooldown from the contract", async ({ page 
   await page.getByRole("button", { name: "alice.test" }).click();
   await expect(page.getByTestId("cooldown-note")).toContainText("Cooldown between claims: 1 minute.");
   await expect(page.getByTestId("cooldown-note")).toContainText("This is a short demo cooldown. A real warranty would use days.");
+});
+
+test("how it works lists the supported wallets with an honest status", async ({ page }) => {
+  await page.goto("/how-it-works");
+  const table = page.locator("#supported-wallets");
+  await expect(table).toBeVisible();
+  await expect(table.locator("tbody tr")).toHaveCount(11);
+  await expect(table).toContainText("MyNearWallet");
+  await expect(table).toContainText("Ledger");
+  await expect(table).toContainText("MetaMask");
+  await expect(table).toContainText("Retired");
+  await expect(table.locator("tbody")).toContainText("not verified");
+});
+
+test("connect dialog at 375px lists the NEAR wallets and the Meteor hint", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/");
+  // Below 900px the sidebar is collapsed behind the Menu button.
+  await page.getByRole("button", { name: "Menu" }).click();
+  await page.getByRole("button", { name: "Choose a wallet" }).click();
+
+  const dialog = page.getByTestId("wallet-picker");
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("NEAR wallets");
+  await expect(dialog).toContainText("Meteor Wallet");
+  await expect(page.getByTestId("meteor-hint")).toHaveText(
+    "Meteor opens a popup window. Allow popups for this site.",
+  );
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+  expect(overflow).toBe(false);
+
+  await page.screenshot({ path: "test-results/connect-dialog-375.png" });
+
+  // The picker still signs in through the test wallet in the test build.
+  await dialog.getByRole("button", { name: "Meteor Wallet" }).click();
+  await expect(dialog).toHaveCount(0);
+  // The account line lives in the sidebar, which is collapsed at 375px.
+  await expect(page.locator(".who")).toHaveText("Signed in as alice.test");
+});
+
+async function openPickerFromSidebar(page: import("@playwright/test").Page, mobile: boolean) {
+  if (mobile) {
+    await page.getByRole("button", { name: "Menu" }).click();
+  }
+  await page.getByRole("button", { name: "Choose a wallet" }).click();
+}
+
+test.describe("wallet picker is a real modal", () => {
+  for (const viewport of [
+    { name: "desktop", width: 1280, height: 800, mobile: false },
+    { name: "mobile", width: 375, height: 812, mobile: true },
+  ]) {
+    test(`${viewport.name}: opens inside the viewport at scrollY 0 and closes on Escape`, async ({ page }) => {
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await page.goto("/");
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await openPickerFromSidebar(page, viewport.mobile);
+
+      const dialog = page.getByTestId("wallet-picker");
+      await expect(dialog).toBeVisible();
+      await expect(dialog).toHaveAttribute("open", "");
+
+      const box = await dialog.boundingBox();
+      expect(box).not.toBeNull();
+      if (box) {
+        expect(box.y).toBeGreaterThanOrEqual(0);
+        expect(box.y + box.height).toBeLessThanOrEqual(viewport.height + 1);
+        expect(box.x).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1);
+      }
+
+      await expect(dialog).toContainText("NEAR wallets");
+      await expect(dialog).toContainText("Meteor Wallet");
+      await expect(dialog).not.toContainText("MyNearWallet");
+
+      await page.keyboard.press("Escape");
+      await expect(dialog).toHaveCount(0);
+    });
+  }
+
+  test("the issuer connect button opens the picker instead of a wallet", async ({ page }) => {
+    await page.goto("/issuer");
+    await expect(page.getByText("Connect an issuer wallet to mint warranties.")).toBeVisible();
+    await page.getByRole("button", { name: "Connect wallet" }).click();
+    const dialog = page.getByTestId("wallet-picker");
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText("Meteor Wallet");
+    // Nothing navigates and no wallet popup is attempted until a wallet is picked.
+    await expect(page).toHaveURL(/\/issuer$/);
+    await page.getByRole("button", { name: "Close" }).click();
+    await expect(dialog).toHaveCount(0);
+  });
+
+  test("the holder page connect button opens the picker", async ({ page }) => {
+    await page.goto("/asset/EB-001/owner");
+    await page.getByRole("button", { name: "Connect wallet" }).click();
+    await expect(page.getByTestId("wallet-picker")).toBeVisible();
+  });
+
+  test("the picker still opens with a locked-down window.ethereum", async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(window, "ethereum", {
+        value: { isMetaMask: false },
+        configurable: false,
+        writable: false,
+      });
+    });
+    await page.goto("/");
+    await page.getByRole("button", { name: "Choose a wallet" }).click();
+    await expect(page.getByTestId("wallet-picker")).toBeVisible();
+  });
+});
+
+test("the EVM group appears after the NEAR wallets with logos or fallbacks", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Menu" }).click();
+  await page.getByRole("button", { name: "Choose a wallet" }).click();
+
+  const dialog = page.getByTestId("wallet-picker");
+  await expect(dialog).toBeVisible();
+  const headings = await dialog.locator("h3").allInnerTexts();
+  expect(headings).toEqual(["NEAR wallets", "Other wallets (EVM)"]);
+  await expect(dialog).toContainText("MetaMask");
+  await expect(dialog).toContainText("WalletConnect (QR)");
+
+  // Every row carries a bundled logo or the neutral initial badge.
+  const rows = dialog.locator("li");
+  const rowCount = await rows.count();
+  const withArt = await dialog.locator("img.wallet-logo, .wallet-logo-fallback").count();
+  expect(withArt).toBe(rowCount);
+  expect(await dialog.locator("img.wallet-logo").count()).toBeGreaterThan(0);
+
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+  expect(overflow).toBe(false);
+  await page.screenshot({ path: "test-results/picker-with-evm-375.png" });
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
 });

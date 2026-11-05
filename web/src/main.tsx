@@ -1,3 +1,4 @@
+import { Buffer } from "buffer";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
@@ -5,6 +6,11 @@ import { App } from "./App";
 import { loadConfig } from "./config";
 import { createAppChain } from "./near/client";
 import "./styles.css";
+
+// The Ledger wallet chunk expects a Node-style Buffer; define it before any
+// wallet module is loaded so that chunk cannot throw "Buffer is not defined".
+const globalScope = window as unknown as { Buffer?: typeof Buffer };
+globalScope.Buffer ??= Buffer;
 
 const root = document.getElementById("root");
 if (!root) {

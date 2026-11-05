@@ -432,19 +432,61 @@ body {
   }
 }
 
-#near-wallet-selector-modal,
-#near-wallet-selector-modal * {
-  font-family: var(--sans);
+/* The wallet picker is opened with showModal(), so it lives in the top layer.
+   Keep it centred and inside the viewport on small screens. */
+#root dialog[open] {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  height: fit-content;
+  max-height: 85vh;
+  overflow: auto;
 }
 
-/* The Meteor module connects through @meteorwallet/sdk, which uses the
-   injected window.meteorWallet when the extension is present and otherwise
-   needs a popup, so say so in the picker. */
-#near-wallet-selector-modal .nws-modal-body::after {
-  content: "Meteor opens a popup window. Allow popups for this site.";
-  display: block;
-  margin: 0.9rem 0 0;
-  color: var(--muted);
-  font-size: 0.75rem;
-  line-height: 1.4;
+#root dialog::backdrop {
+  background: rgba(4, 6, 9, 0.72);
+}
+
+/* ---------- wallet logos ---------- */
+.wallet-logo {
+  flex: none;
+  border-radius: 6px;
+  object-fit: contain;
+  display: inline-block;
+}
+
+.wallet-logo-wide {
+  width: auto;
+  max-width: 96px;
+  object-fit: contain;
+}
+
+.wallet-logo-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--paper);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+#root .wallet-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.wallet-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@media (max-width: 480px) {
+  .wallet-logo {
+    width: 24px;
+    height: 24px;
+  }
 }

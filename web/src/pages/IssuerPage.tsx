@@ -10,7 +10,7 @@ import { randomSaltHex, serialHash } from "../near/hash";
 import { nsFromNow } from "../near/time";
 import type { AssetView } from "../near/types";
 import { normalizeAssetView } from "../near/views";
-import { Field, TxNotice, type TxState } from "../ui";
+import { Field, TxNotice, type TxState, useWalletPicker } from "../ui";
 
 const DEMO = {
   tokenId: "EB-002",
@@ -33,6 +33,7 @@ export function IssuerPage({
   accountId: string | null;
   explorer: (hash: string) => string;
 }) {
+  const openWalletPicker = useWalletPicker();
   const [salt, setSalt] = useState(randomSaltHex);
   const [showSalt, setShowSalt] = useState(false);
   const [tokenId, setTokenId] = useState("");
@@ -143,7 +144,7 @@ export function IssuerPage({
         <p>The serial is salted and hashed in this browser. Only the hash is sent.</p>
         <div className="card">
           <p>Connect an issuer wallet to mint warranties.</p>
-          <button type="button" onClick={() => void chain.connect()}>Connect wallet</button>
+          <button type="button" onClick={openWalletPicker}>Connect wallet</button>
         </div>
       </article>
     );

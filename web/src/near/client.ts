@@ -11,13 +11,17 @@ export function createAppChain(config: AppConfig = loadConfig()): Chain {
   return lazyNearChain(config);
 }
 
-function lazyNearChain(config: AppConfig): Chain {
+export function lazyNearChain(
+  config: AppConfig,
+  load: () => Promise<Chain> = () => import("./near-wallet").then((mod) => mod.createNearChain(config)),
+): Chain {
   let pending: Promise<Chain> | null = null;
   const inner = () => {
-    pending ??= import("./near-wallet").then((mod) => mod.createNearChain(config));
+    pending ??= load();
     return pending;
   };
   let accountId: string | null = null;
+  let unavailable: string[] = [];
   const listeners = new Set<() => void>();
   const notify = () => listeners.forEach((listener) => listener());
 
@@ -25,6 +29,7 @@ function lazyNearChain(config: AppConfig): Chain {
     async ready() {
       const chain = await inner();
       await chain.ready();
+      unavailable = chain.unavailableWallets?.() ?? [];
       accountId = chain.accountId();
       chain.subscribe(() => {
         accountId = chain.accountId();
@@ -34,6 +39,14 @@ function lazyNearChain(config: AppConfig): Chain {
     accountId: () => accountId,
     async connect() {
       await (await inner()).connect();
+    },
+    async connectWith(walletId: string) {
+      const chain = await inner();
+      await chain.connectWith?.(walletId);
+      unavailable = chain.unavailableWallets?.() ?? [];
+    },
+    unavailableWallets() {
+      return unavailable;
     },
     async disconnect() {
       await (await inner()).disconnect();

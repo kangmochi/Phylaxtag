@@ -4,6 +4,8 @@ import { formatNear } from "../near/amounts";
 import type { Chain } from "../near/chain";
 import type { StorageInfo } from "../near/types";
 import { normalizeStorageInfo } from "../near/views";
+import { WalletLogo } from "../ui";
+import { WALLETS } from "../wallets";
 
 const FUNCTIONS = [
   "new",
@@ -110,6 +112,42 @@ export function HowPage({ chain }: { chain: Chain }) {
             <li>contract_balance: {formatNear(info.contract_balance)}</li>
           </ul>
         ) : <p className="note" role="status">Loading storage info.</p>}
+      </section>
+
+      <section className="card">
+        <h2>Supported wallets</h2>
+        <p className="note">
+          Verified means someone signed in on NEAR testnet with that wallet and came back to this
+          page with the account shown. Not verified means the wallet is wired into the connect
+          screen but the sign-in has not been run yet; treat it as untested.
+        </p>
+        <table id="supported-wallets">
+          <thead>
+            <tr>
+              <th>Wallet</th>
+              <th>Type</th>
+              <th>Testnet account</th>
+              <th>Status</th>
+              <th>How to use it</th>
+            </tr>
+          </thead>
+          <tbody>
+            {WALLETS.map((wallet) => (
+              <tr key={wallet.id}>
+                <td data-label="Wallet">
+                  <span className="wallet-cell">
+                    <WalletLogo entry={wallet} size={24} />
+                    {wallet.name}
+                  </span>
+                </td>
+                <td data-label="Type">{wallet.kind}</td>
+                <td data-label="Testnet account">{wallet.testnetAccount}</td>
+                <td data-label="Status">{wallet.status}</td>
+                <td data-label="How to use it">{wallet.how}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </section>
     </article>
   );

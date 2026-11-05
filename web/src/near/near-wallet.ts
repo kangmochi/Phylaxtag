@@ -1,17 +1,86 @@
 import { actionCreators } from "@near-js/transactions";
-import { setupWalletSelector, type WalletSelector } from "@near-wallet-selector/core";
-import { setupMeteorWallet } from "@near-wallet-selector/meteor-wallet";
-import { setupModal } from "@near-wallet-selector/modal-ui";
-import { setupMyNearWallet } from "@near-wallet-selector/my-near-wallet";
-import "@near-wallet-selector/modal-ui/styles.css";
+import {
+  setupWalletSelector,
+  type WalletModuleFactory,
+  type WalletSelector,
+} from "@near-wallet-selector/core";
 
 import type { AppConfig } from "../config";
+import { settleWalletLoaders, usableWalletId } from "../wallets";
 import type { Chain } from "./chain";
 import { rpcView } from "./rpc";
 
 interface OutcomeLike {
   status?: { Failure?: { error_message?: string } } | string;
   transaction_outcome?: { id?: string };
+}
+
+/** Wallet id used by connect() when the picker has not chosen one yet. */
+const DEFAULT_WALLET = "meteor-wallet";
+const REMEMBERED_KEY = "phylaxtag:wallet";
+const SESSION_KEY = "phylaxtag:session";
+
+function readStorage(key: string): string | null {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeStorage(key: string, value: string | null): void {
+  try {
+    if (value === null) {
+      window.localStorage.removeItem(key);
+    } else {
+      window.localStorage.setItem(key, value);
+    }
+  } catch {
+    // Storage can be blocked; the app then simply forgets the choice.
+  }
+}
+
+/**
+ * The wallet modules are much heavier than the app (Ledger, Bitte, HERE and the
+ * NEAR transaction stack together), so they are imported on demand. A visitor
+ * who never connects downloads none of it. Each wallet loads on its own: a
+ * chunk that fails only removes that wallet, never the whole picker.
+ */
+interface LoadedModules {
+  modules: WalletModuleFactory[];
+  failed: string[];
+}
+
+const WALLET_LOADERS: ReadonlyArray<readonly [string, () => Promise<WalletModuleFactory>]> = [
+  ["meteor-wallet", async () => (await import("@near-wallet-selector/meteor-wallet")).setupMeteorWallet()],
+  ["here-wallet", async () => (await import("@near-wallet-selector/here-wallet")).setupHereWallet()],
+  ["sender", async () => (await import("@near-wallet-selector/sender")).setupSender()],
+  ["nightly", async () => (await import("@near-wallet-selector/nightly")).setupNightly()],
+  [
+    "bitte-wallet",
+    async () => {
+      const mod = await import("@near-wallet-selector/bitte-wallet");
+      // The Bitte factory is typed for InjectedWallet; the selector accepts it.
+      return mod.setupBitteWallet() as unknown as WalletModuleFactory;
+    },
+  ],
+  ["intear-wallet", async () => (await import("@near-wallet-selector/intear-wallet")).setupIntearWallet()],
+  ["ledger", async () => (await import("@near-wallet-selector/ledger")).setupLedger()],
+];
+
+async function loadModules(): Promise<LoadedModules> {
+  const projectId = (import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as string | undefined)?.trim();
+  const loaders = [...WALLET_LOADERS];
+  if (projectId) {
+    // The EVM stack (wagmi, connectors, the selector module) is heavy and only
+    // wanted when a WalletConnect project id exists.
+    loaders.push([
+      "ethereum-wallets",
+      async () => (await import("./evm")).createEthereumWalletModule(projectId),
+    ]);
+  }
+  const { items, failed } = await settleWalletLoaders(loaders);
+  return { modules: items.map((item) => item.value), failed };
 }
 
 function failureMessage(outcome: OutcomeLike): string | null {
@@ -48,41 +117,71 @@ export function createNearChain(config: AppConfig): Chain {
   const listeners = new Set<() => void>();
   const notify = () => listeners.forEach((listener) => listener());
   let selectorPromise: Promise<WalletSelector> | null = null;
+  let failedWallets: string[] = [];
 
-  const selector = () => {
-    selectorPromise ??= setupWalletSelector({
-      network: "testnet",
-      modules: [
-        setupMyNearWallet({ walletUrl: "https://testnet.mynearwallet.com" }),
-        setupMeteorWallet(),
-      ],
-    });
-    return selectorPromise;
-  };
-
-  return {
-    async ready() {
-      const selected = await selector();
+  async function selector(): Promise<WalletSelector> {
+    selectorPromise ??= (async () => {
+      const loaded = await loadModules();
+      failedWallets = loaded.failed;
+      const selected = await setupWalletSelector({ network: "testnet", modules: loaded.modules });
       accountId = selected.store.getState().accounts[0]?.accountId ?? null;
       selected.on("signedIn", ({ accounts }) => {
         accountId = accounts[0]?.accountId ?? null;
+        writeStorage(SESSION_KEY, accountId ? "1" : null);
         notify();
       });
       selected.on("signedOut", () => {
         accountId = null;
+        writeStorage(SESSION_KEY, null);
         notify();
       });
+      return selected;
+    })();
+    return selectorPromise;
+  }
+
+  async function connectWithWallet(walletId: string) {
+    writeStorage(REMEMBERED_KEY, walletId);
+    const selected = await selector();
+    if (failedWallets.includes(walletId)) {
+      throw new Error(`WalletUnavailable:${walletId}`);
+    }
+    // The selector types sign-in per wallet kind (redirect, popup, hardware)
+    // as an intersection; contractId plus methodNames is what all of them take.
+    const wallet = (await selected.wallet(walletId)) as unknown as {
+      signIn: (params: { contractId: string; methodNames: string[] }) => Promise<unknown>;
+    };
+    await wallet.signIn({
+      contractId: config.contractId,
+      methodNames: ["mint", "pay_service", "nft_transfer", "expire"],
+    });
+    accountId = selected.store.getState().accounts[0]?.accountId ?? null;
+    writeStorage(SESSION_KEY, accountId ? "1" : null);
+    notify();
+  }
+
+  return {
+    async ready() {
+      // A cold visit does not need the wallet bundle: restore a session only
+      // when this browser had one before.
+      if (readStorage(SESSION_KEY) !== "1") {
+        return;
+      }
+      await selector();
       notify();
     },
     accountId: () => accountId,
     async connect() {
-      const selected = await selector();
-      setupModal(selected, { contractId: config.contractId, description: "Phylaxtag testnet demo" }).show();
+      const remembered = usableWalletId(readStorage(REMEMBERED_KEY));
+      await connectWithWallet(remembered ?? DEFAULT_WALLET);
     },
+    unavailableWallets: () => [...failedWallets],
+    connectWith: connectWithWallet,
     async disconnect() {
       // The wallet popup can stall (Meteor stays on "Receiving details from
       // Dapp"). Clear the local session first, then give signOut at most 3 s.
       accountId = null;
+      writeStorage(SESSION_KEY, null);
       notify();
       try {
         const selected = await selector();

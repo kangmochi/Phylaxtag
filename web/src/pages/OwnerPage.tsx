@@ -10,7 +10,7 @@ import { CALL_GAS, ONE_YOCTO } from "../near/gas";
 import { noteHash } from "../near/hash";
 import type { AssetView } from "../near/types";
 import { normalizeAssetView, normalizeServiceHistory } from "../near/views";
-import { Field, TxNotice, type TxState } from "../ui";
+import { Field, TxNotice, type TxState, useWalletPicker } from "../ui";
 
 function SaleNote({ receipt, warning }: { receipt: string | null; warning: boolean }) {
   if (!receipt) {
@@ -32,6 +32,7 @@ export function OwnerPage({
   accountId: string | null;
   explorer: (hash: string) => string;
 }) {
+  const openWalletPicker = useWalletPicker();
   const { tokenId = "" } = useParams();
   const [asset, setAsset] = useState<AssetView | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
@@ -235,7 +236,7 @@ export function OwnerPage({
           {signedIn ? (
             <button type="button" onClick={() => void chain.disconnect()}>Switch account</button>
           ) : (
-            <button type="button" onClick={() => void chain.connect()}>Connect wallet</button>
+            <button type="button" onClick={openWalletPicker}>Connect wallet</button>
           )}
           <Link className="button secondary" to={`/asset/${tokenId}`}>Back to the warranty</Link>
         </p>
