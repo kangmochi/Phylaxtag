@@ -1155,8 +1155,9 @@ body {
   isolation: isolate;
 }
 
-.tile::after, .party::after, .limit::after, .step::after,
-.try-link::after, .tech-row::after, .feed-row::after {
+/* The spotlight lives on ::before because .party keeps its arrow on ::after. */
+.tile::before, .party::before, .limit::before, .step::before,
+.try-link::before, .tech-row::before, .feed-row::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -1171,8 +1172,8 @@ body {
   );
 }
 
-.tile:hover::after, .party:hover::after, .limit:hover::after, .step:hover::after,
-.try-link:hover::after, .tech-row:hover::after, .feed-row:hover::after { opacity: 1; }
+.tile:hover::before, .party:hover::before, .limit:hover::before, .step:hover::before,
+.try-link:hover::before, .tech-row:hover::before, .feed-row:hover::before { opacity: 1; }
 
 .tile > *, .party > *, .limit > *, .step > *, .try-link > *, .tech-row > *, .feed-row > * {
   position: relative;
