@@ -22,7 +22,7 @@ describe("wallet logos", () => {
 
   it("does not invent logos for wallets without an official file", () => {
     expect(walletLogo("meteor-wallet")).toBeNull();
-    expect(walletLogo("evm-coinbase")).toBeNull();
+    expect(walletLogo("bitte-wallet")).toBeNull();
     expect(walletInitial({ id: "meteor-wallet", name: "Meteor Wallet" } as never)).toBe("M");
   });
 });

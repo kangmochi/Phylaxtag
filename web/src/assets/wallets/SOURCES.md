@@ -12,7 +12,9 @@ claims no rights and no endorsement.
 | `nightly.png` | Nightly | https://nightly.app/favicon.ico | Official site asset, Nightly brand guidelines apply | converted from their favicon, 64x64, 5.3 KB |
 | `sender.png` | Sender | https://sender.org/assets/sender-bsk-NPUA.png | Official site asset, Sender brand guidelines apply | downscaled to 64x64, 4.2 KB |
 | `intear-wallet.svg` | Intear Wallet | https://wallet.intear.tech/favicon.svg | Official site asset, Intear brand guidelines apply | 1.0 KB, square |
-| `ledger.png` | Ledger | https://ledger-wp-website-s3-prd.ledger.com/uploads/2021/11/Ledger_favicon.png | Official site asset, Ledger brand guidelines apply | downscaled to 64x64, 0.7 KB |
+| `ledger.png` | Ledger | https://ledger-wp-website-s3-prd.ledger.com/uploads/2021/11/Ledger_favicon.png | Official site asset, Ledger brand guidelines apply | downscaled to 64x64, **recoloured to white** because the official mark is pure black and disappeared on the dark picker |
+| `coinbase-wallet.png` | Coinbase Wallet | https://wallet.coinbase.com (site icon, fetched through Google's favicon service) | Official mark, Coinbase brand guidelines apply | 96x96 source downscaled to 64x64 |
+| `walletconnect.png` | WalletConnect | https://walletconnect.com/favicon.ico | Official mark, WalletConnect brand guidelines apply | 32x32 source upscaled to 64x64 |
 
 ## Wallets that use the neutral initial badge instead
 
@@ -21,8 +23,6 @@ a neutral badge with the wallet's initial rather than an invented logo:
 
 - Meteor Wallet
 - Bitte Wallet
-- Coinbase Wallet
-- WalletConnect (QR)
 - MyNearWallet (retired; table only)
 
 If the owners publish a press kit or a repo asset with a usable licence, add the
