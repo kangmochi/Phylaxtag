@@ -1154,13 +1154,25 @@ body {
    component rules (several of them are #root-scoped) without !important, and
    the styles test keeps .card rules inside the app root. */
 #root .tile, #root .try-link, #root .limit, #root .tech-row,
-#root .step, #root .feed-row, #root .card, #root .panel {
+#root .step, #root .feed-row, #root .card, #root .panel, #root form {
   border: 1px solid rgba(76, 141, 255, 0.22);
   background-image: linear-gradient(180deg, rgba(76, 141, 255, 0.06), rgba(76, 141, 255, 0.012));
 }
 
 #root .tile:hover, #root .try-link:hover, #root .limit:hover, #root .tech-row:hover,
-#root .step:hover, #root .feed-row:hover, #root .card:hover, #root .panel:hover {
+#root .step:hover, #root .feed-row:hover, #root .card:hover, #root .panel:hover, #root form:hover {
+  border-color: rgba(76, 141, 255, 0.45);
+  background-image: linear-gradient(180deg, rgba(76, 141, 255, 0.1), rgba(76, 141, 255, 0.03));
+}
+
+/* Section cards are matched by a heavier selector in the base sheet, so they
+   need their own block to keep the same resting light. */
+#root article > section:not(.hero):not(.stats):not(.home-block):not(.how-block) {
+  border: 1px solid rgba(76, 141, 255, 0.22);
+  background-image: linear-gradient(180deg, rgba(76, 141, 255, 0.06), rgba(76, 141, 255, 0.012));
+}
+
+#root article > section:not(.hero):not(.stats):not(.home-block):not(.how-block):hover {
   border-color: rgba(76, 141, 255, 0.45);
   background-image: linear-gradient(180deg, rgba(76, 141, 255, 0.1), rgba(76, 141, 255, 0.03));
 }
@@ -1172,7 +1184,13 @@ body {
   isolation: isolate;
 }
 
-#root .card, #root .panel {
+#root .card, #root .panel, #root form {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+#root article > section:not(.hero):not(.stats):not(.home-block):not(.how-block) {
   position: relative;
   overflow: hidden;
   isolation: isolate;
@@ -1195,7 +1213,8 @@ body {
   );
 }
 
-#root .card::before, #root .panel::before {
+#root article > section:not(.hero):not(.stats):not(.home-block):not(.how-block)::before,
+#root .card::before, #root .panel::before, #root form::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -1213,14 +1232,23 @@ body {
 .tile:hover::before, .party:hover::before, .limit:hover::before, .step:hover::before,
 .try-link:hover::before, .tech-row:hover::before, .feed-row:hover::before { opacity: 1; }
 
-#root .card:hover::before, #root .panel:hover::before { opacity: 1; }
+#root article > section:not(.hero):not(.stats):not(.home-block):not(.how-block):hover::before,
+#root .card:hover::before, #root .panel:hover::before, #root form:hover::before { opacity: 1; }
+
+/* A form that already sits inside a card keeps the card's single spotlight. */
+#root .card form::before, #root .panel form::before { content: none; }
 
 .tile > *, .party > *, .limit > *, .step > *, .try-link > *, .tech-row > *, .feed-row > * {
   position: relative;
   z-index: 1;
 }
 
-#root .card > *, #root .panel > * {
+#root .card > *, #root .panel > *, #root form > * {
+  position: relative;
+  z-index: 1;
+}
+
+#root article > section:not(.hero):not(.stats):not(.home-block):not(.how-block) > * {
   position: relative;
   z-index: 1;
 }
