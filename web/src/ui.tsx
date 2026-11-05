@@ -6,7 +6,7 @@ import { TEST_ACCOUNTS, testWalletEnabled } from "phylaxtag-test-wallet";
 import type { AppConfig } from "./config";
 import type { Chain } from "./near/chain";
 import type { ExplainedError } from "./near/errors";
-import { METEOR_HINT, groupTitle, selectorIdOf, walletGroups, walletProblem, type WalletEntry } from "./wallets";
+import { METEOR_HINT, detectedInjectedWallet, groupTitle, selectorIdOf, walletGroups, walletProblem, type WalletEntry } from "./wallets";
 import { isWideLogo, walletInitial, walletLogo } from "./wallet-logos";
 
 /**
@@ -254,6 +254,8 @@ export function WalletPicker({
   onClose: () => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement | null>(null);
+  // Read once per open: which EIP-1193 wallet an "Other wallet" click would hit.
+  const detected = detectedInjectedWallet();
 
   // showModal() puts the dialog in the top layer, so it is centred and visible
   // without any page CSS, and Escape works natively.
@@ -308,6 +310,12 @@ export function WalletPicker({
                     {entry.name}
                   </button>
                   <span className="note"> {broken ? "Could not be loaded. Try again later." : entry.how}</span>
+                  {entry.id === "evm-injected" ? (
+                    <span className="note">
+                      {" "}
+                      {detected ? `${detected} detected in this browser.` : "No browser wallet extension detected."}
+                    </span>
+                  ) : null}
                 </li>
               );
             })}

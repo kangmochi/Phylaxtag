@@ -147,7 +147,7 @@ export function HowPage({ chain, contractId }: { chain: Chain; contractId: strin
             </tr>
           </thead>
           <tbody>
-            {WALLETS.map((wallet) => (
+            {WALLETS.filter((wallet) => !wallet.pickerOnly).map((wallet) => (
               <tr key={wallet.id}>
                 <td data-label="Wallet">
                   <span className="wallet-cell">

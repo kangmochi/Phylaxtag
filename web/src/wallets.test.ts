@@ -27,11 +27,13 @@ describe("wallet list", () => {
   });
 
   it("shows the EVM group after the NEAR wallets when it is enabled", () => {
-    const groups = walletGroups(true, [...WALLETS, evmEntry]);
+    const groups = walletGroups(true);
     expect(groups).toHaveLength(2);
     expect(groupTitle(groups[0])).toBe("NEAR wallets");
     expect(groupTitle(groups[1])).toBe("Other wallets (EVM)");
-    expect(groups[1][0].id).toBe("evm-metamask");
+    // One honest entry: the browser decides which extension owns window.ethereum.
+    expect(groups[1][0].id).toBe("evm-injected");
+    expect(groups[1]).toHaveLength(1);
     expect(selectorIdOf(groups[1][0])).toBe("ethereum-wallets");
   });
 
@@ -45,10 +47,18 @@ describe("wallet list", () => {
     expect(groups.flat().every((wallet) => wallet.group === "near")).toBe(true);
   });
 
-  it("routes every EVM entry through the one EVM selector module", () => {
-    const evm = WALLETS.filter((wallet) => wallet.group === "evm");
+  it("routes every offered EVM entry through the one EVM selector module", () => {
+    const evm = WALLETS.filter((wallet) => wallet.group === "evm" && !wallet.tableOnly);
     expect(evm.length).toBeGreaterThan(0);
     expect(new Set(evm.map((wallet) => selectorIdOf(wallet)))).toEqual(new Set(["ethereum-wallets"]));
+  });
+
+  it("keeps wallets reached through the Other wallet entry in the table only", () => {
+    const offered = walletGroups(true).flat().map((wallet) => wallet.id);
+    expect(offered).toContain("evm-injected");
+    expect(offered).not.toContain("evm-metamask");
+    expect(offered).not.toContain("evm-walletconnect");
+    expect(WALLETS.some((wallet) => wallet.id === "evm-metamask" && wallet.tableOnly)).toBe(true);
   });
 
   it("never offers a retired wallet in the picker but keeps it in the table", () => {

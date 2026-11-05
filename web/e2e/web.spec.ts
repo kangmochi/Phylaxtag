@@ -354,8 +354,11 @@ test("the EVM group appears after the NEAR wallets with logos or fallbacks", asy
   await expect(dialog).toBeVisible();
   const headings = await dialog.locator("h3").allInnerTexts();
   expect(headings).toEqual(["NEAR wallets", "Other wallets (EVM)"]);
-  await expect(dialog).toContainText("MetaMask");
-  await expect(dialog).toContainText("WalletConnect (QR)");
+  // One honest EVM entry: the picker cannot name a specific extension, because
+  // whichever wallet owns window.ethereum is the one that opens.
+  await expect(dialog).toContainText("Other wallet");
+  await expect(dialog).toContainText("MetaMask, Coinbase Wallet, Phantom, Rabby, Zerion or OKX");
+  expect(await dialog.locator("li").count()).toBe(8);
 
   // Every row carries a bundled logo or the neutral initial badge.
   const rows = dialog.locator("li");

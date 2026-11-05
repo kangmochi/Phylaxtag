@@ -23,6 +23,10 @@ export interface WalletEntry {
   how: string;
   /** Retired wallets stay in the table but are never offered in the picker. */
   retired?: boolean;
+  /** Kept in the supported-wallets table only, e.g. a wallet reached through another entry. */
+  tableOnly?: boolean;
+  /** Shown in the picker only, not as a row of its own in the supported-wallets table. */
+  pickerOnly?: boolean;
   /** Selector module that handles the click; defaults to `id`. */
   selectorId?: string;
 }
@@ -106,34 +110,45 @@ export const WALLETS: readonly WalletEntry[] = [
     how: "Needs a Ledger device with the NEAR app open and unlocked.",
   },
   {
-    id: "evm-metamask",
+    id: "evm-injected",
     selectorId: "ethereum-wallets",
+    name: "Other wallet",
+    pickerOnly: true,
+    group: "evm",
+    kind: "extension",
+    testnetAccount: "not verified",
+    status: "not verified",
+    how: "Uses the wallet installed in this browser: MetaMask, Coinbase Wallet, Phantom, Rabby, Zerion or OKX.",
+  },
+  {
+    id: "evm-metamask",
     name: "MetaMask",
     group: "evm",
     kind: "extension",
     testnetAccount: "not verified",
     status: "not verified",
-    how: "Needs the MetaMask extension or app. The NEAR account is the 0x address.",
+    how: "Reached through the Other wallet entry. The NEAR account is the 0x address.",
+    tableOnly: true,
   },
   {
     id: "evm-coinbase",
-    selectorId: "ethereum-wallets",
     name: "Coinbase Wallet",
     group: "evm",
     kind: "extension",
     testnetAccount: "not verified",
     status: "not verified",
-    how: "Needs the Coinbase Wallet extension or app. The NEAR account is the 0x address.",
+    how: "Reached through the Other wallet entry. The NEAR account is the 0x address.",
+    tableOnly: true,
   },
   {
     id: "evm-walletconnect",
-    selectorId: "ethereum-wallets",
     name: "WalletConnect (QR)",
     group: "evm",
     kind: "popup",
     testnetAccount: "not verified",
     status: "not verified",
-    how: "Scan a QR code with Rainbow, OKX, Zerion, Trust, Rabby or another EVM wallet.",
+    how: "Not offered yet: the QR modal is not wired into this build, so only installed browser wallets connect.",
+    tableOnly: true,
   },
 ];
 
@@ -143,7 +158,7 @@ export const WALLETS: readonly WalletEntry[] = [
  * so the group is hidden instead of failing.
  */
 export function walletGroups(evmEnabled: boolean, wallets: readonly WalletEntry[] = WALLETS): WalletEntry[][] {
-  const usable = wallets.filter((wallet) => !wallet.retired);
+  const usable = wallets.filter((wallet) => !wallet.retired && !wallet.tableOnly);
   const near = usable.filter((wallet) => wallet.group === "near");
   const evm = usable.filter((wallet) => wallet.group === "evm");
   const groups = [near, ...(evmEnabled ? [evm] : [])];
@@ -204,4 +219,27 @@ export function walletProblem(name: string, raw: string): string {
     return `${name} needs a popup window. Allow popups for this site and try again.`;
   }
   return `${name} did not finish signing in. Try again, or pick another wallet.`;
+}
+
+/**
+ * Name of the EIP-1193 wallet that currently owns `window.ethereum`, if any.
+ * Most extensions also set `isMetaMask`, so the specific flags are checked
+ * first: Zerion, for example, answers true to both.
+ */
+export function detectedInjectedWallet(): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  const eth = (window as unknown as { ethereum?: Record<string, unknown> }).ethereum;
+  if (!eth) {
+    return null;
+  }
+  if (eth.isZerion) return "Zerion";
+  if (eth.isRabby) return "Rabby";
+  if (eth.isPhantom) return "Phantom";
+  if (eth.isOkxWallet || eth.isOKExWallet) return "OKX Wallet";
+  if (eth.isCoinbaseWallet) return "Coinbase Wallet";
+  if (eth.isBraveWallet) return "Brave Wallet";
+  if (eth.isMetaMask) return "MetaMask";
+  return "An installed wallet";
 }
