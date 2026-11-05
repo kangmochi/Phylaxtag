@@ -162,22 +162,22 @@ export function HowPage({ chain, contractId }: { chain: Chain; contractId: strin
           workshop that is not on the list.
         </p>
         <div className="flow">
-          <div className="party">
+          <div className="party is-lit">
             <span className="party-step">01 · maker</span>
             <b>Issuer</b>
             <p>Mints the warranty and pays the first fund in NEAR, with a per-claim cap and a cooldown.</p>
           </div>
-          <div className="party is-accent">
+          <div className="party is-lit">
             <span className="party-step">02 · on the token</span>
             <b>Warranty fund</b>
             <p>{fundLine}</p>
           </div>
-          <div className="party">
+          <div className="party is-lit">
             <span className="party-step">03 · approved</span>
             <b>Workshop</b>
             <p>Paid straight from the fund by the current holder. Every payment lands in the service book.</p>
           </div>
-          <div className="party">
+          <div className="party is-lit">
             <span className="party-step">04 · transfer</span>
             <b>New owner</b>
             <p>One sale moves the NFT, the remaining fund and the whole history. Nothing is re-issued.</p>
@@ -284,7 +284,23 @@ export function HowPage({ chain, contractId }: { chain: Chain; contractId: strin
           with the account shown. Not verified means the wallet is wired into the connect screen but the
           sign-in has not been run yet; treat it as untested.
         </p>
-        <table id="supported-wallets">
+        <div className="wallet-strip" aria-label="Supported wallets">
+          <div className="wallet-track">
+            {[...WALLETS.filter((wallet) => !wallet.pickerOnly), ...WALLETS.filter((wallet) => !wallet.pickerOnly)].map((wallet, index) => (
+              <span className="wallet-chip" key={`${wallet.id}-${index}`}>
+                <WalletLogo entry={wallet} size={28} />
+                <span>{wallet.name}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+        <p className="note">
+          Every wallet here is wired into the connect screen. None has a completed sign-in yet, so the
+          table below still says not verified for all of them.
+        </p>
+        <details className="wallet-details" open>
+          <summary>Details</summary>
+          <table id="supported-wallets">
           <thead>
             <tr>
               <th>Wallet</th>
@@ -310,7 +326,8 @@ export function HowPage({ chain, contractId }: { chain: Chain; contractId: strin
               </tr>
             ))}
           </tbody>
-        </table>
+          </table>
+        </details>
       </section>
     </article>
   );

@@ -987,9 +987,15 @@ body {
   background: var(--bg-soft);
 }
 
-.party.is-accent {
-  border-color: rgba(76, 141, 255, 0.35);
-  background: linear-gradient(180deg, rgba(76, 141, 255, 0.09), rgba(76, 141, 255, 0.02));
+/* All four parties carry the same light: the flow is the product, not one box. */
+.party.is-lit {
+  border-color: rgba(76, 141, 255, 0.28);
+  background: linear-gradient(180deg, rgba(76, 141, 255, 0.07), rgba(76, 141, 255, 0.015));
+}
+
+.party.is-lit:hover {
+  border-color: rgba(76, 141, 255, 0.45);
+  background: linear-gradient(180deg, rgba(76, 141, 255, 0.1), rgba(76, 141, 255, 0.03));
 }
 
 .party-step { font-family: var(--mono); font-size: 0.6875rem; color: var(--muted-2); }
@@ -1077,3 +1083,59 @@ body {
   .limits, .try { grid-template-columns: minmax(0, 1fr); }
   #root .how-block { padding-top: 2.5rem; margin-top: 2.5rem; }
 }
+
+/* ---------- wallet strip (marquee) ---------- */
+.wallet-strip {
+  position: relative;
+  overflow: hidden;
+  margin: 0.5rem 0 1rem;
+  padding: 1.1rem 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+.wallet-track {
+  display: flex;
+  gap: 2.5rem;
+  width: max-content;
+  animation: wallet-marquee 34s linear infinite;
+}
+
+.wallet-strip:hover .wallet-track { animation-play-state: paused; }
+
+@keyframes wallet-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.wallet-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.wallet-chip img { opacity: 0.9; }
+
+.wallet-details { margin-top: 0.5rem; }
+.wallet-details summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  padding: 0.5rem 0;
+}
+.wallet-details summary:hover { color: var(--text); }
+.wallet-details[open] summary { margin-bottom: 0.5rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .wallet-track { animation: none; flex-wrap: wrap; width: auto; }
+}
+
+/* keep the short table cells on one line so words like "extension" do not break */
+#supported-wallets td:nth-child(2),
+#supported-wallets td:nth-child(3),
+#supported-wallets td:nth-child(4) { white-space: nowrap; }
