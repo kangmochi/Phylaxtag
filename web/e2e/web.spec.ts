@@ -236,6 +236,9 @@ test("the claim form states the real cooldown from the contract", async ({ page 
 test("how it works lists the supported wallets with an honest status", async ({ page }) => {
   await page.goto("/how-it-works");
   const table = page.locator("#supported-wallets");
+  // The detail table starts collapsed; the logo strip is the first thing readers see.
+  await expect(table).toBeHidden();
+  await page.locator(".wallet-details summary").click();
   await expect(table).toBeVisible();
   await expect(table.locator("tbody tr")).toHaveCount(11);
   await expect(table).toContainText("MyNearWallet");

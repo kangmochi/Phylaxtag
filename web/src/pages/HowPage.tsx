@@ -298,7 +298,7 @@ export function HowPage({ chain, contractId }: { chain: Chain; contractId: strin
           Every wallet here is wired into the connect screen. None has a completed sign-in yet, so the
           table below still says not verified for all of them.
         </p>
-        <details className="wallet-details" open>
+        <details className="wallet-details">
           <summary>Details</summary>
           <table id="supported-wallets">
           <thead>

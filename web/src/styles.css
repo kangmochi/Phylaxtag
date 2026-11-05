@@ -1139,3 +1139,47 @@ body {
 #supported-wallets td:nth-child(2),
 #supported-wallets td:nth-child(3),
 #supported-wallets td:nth-child(4) { white-space: nowrap; }
+
+/* Cards carry the product name in white; #root a otherwise tints it blue. */
+#root .tile h3,
+#root .try-link b,
+#root .limit h3,
+#root .party b,
+#root .step h3,
+#root .tech-row b { color: var(--text); }
+
+/* ---------- pointer spotlight on cards ---------- */
+.tile, .party, .limit, .step, .try-link, .tech-row, .feed-row {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.tile::after, .party::after, .limit::after, .step::after,
+.try-link::after, .tech-row::after, .feed-row::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  background: radial-gradient(
+    300px circle at var(--mx, 50%) var(--my, 0%),
+    rgba(76, 141, 255, 0.2),
+    transparent 68%
+  );
+}
+
+.tile:hover::after, .party:hover::after, .limit:hover::after, .step:hover::after,
+.try-link:hover::after, .tech-row:hover::after, .feed-row:hover::after { opacity: 1; }
+
+.tile > *, .party > *, .limit > *, .step > *, .try-link > *, .tech-row > *, .feed-row > * {
+  position: relative;
+  z-index: 1;
+}
+
+.tile:hover, .party:hover, .limit:hover, .step:hover, .try-link:hover, .tech-row:hover {
+  border-color: rgba(76, 141, 255, 0.45);
+  box-shadow: 0 0 0 1px rgba(76, 141, 255, 0.18), 0 18px 40px -26px rgba(76, 141, 255, 0.7);
+}

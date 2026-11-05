@@ -123,6 +123,22 @@ export function Shell({
     }
   }
 
+  // One delegated listener gives every card a spotlight that follows the pointer.
+  useEffect(() => {
+    const cards = ".tile, .party, .limit, .step, .try-link, .tech-row, .feed-row";
+    function onMove(event: PointerEvent) {
+      const target = (event.target as HTMLElement | null)?.closest<HTMLElement>(cards);
+      if (!target) {
+        return;
+      }
+      const rect = target.getBoundingClientRect();
+      target.style.setProperty("--mx", `${event.clientX - rect.left}px`);
+      target.style.setProperty("--my", `${event.clientY - rect.top}px`);
+    }
+    document.addEventListener("pointermove", onMove, { passive: true });
+    return () => document.removeEventListener("pointermove", onMove);
+  }, []);
+
   return (
     <WalletPickerContext.Provider value={openWalletPicker}>
       <div className="topline">
