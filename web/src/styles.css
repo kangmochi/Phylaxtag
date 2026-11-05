@@ -1148,8 +1148,42 @@ body {
 #root .step h3,
 #root .tech-row b { color: var(--text); }
 
+/* ---------- base light on every card ---------- */
+/* A permanent, very soft accent so no card reads as dead when the pointer is
+   somewhere else. The pointer spotlight below layers on top of it. */
+.tile, .try-link, .limit, .step, .tech-row, .feed-row {
+  border-color: rgba(76, 141, 255, 0.22);
+  background-image: linear-gradient(180deg, rgba(76, 141, 255, 0.06), rgba(76, 141, 255, 0.012));
+}
+
+#root .card {
+  border-color: rgba(76, 141, 255, 0.22);
+  background-image: linear-gradient(180deg, rgba(76, 141, 255, 0.06), rgba(76, 141, 255, 0.012));
+}
+
+#root .panel {
+  border-color: rgba(76, 141, 255, 0.24);
+  background-image:
+    linear-gradient(180deg, rgba(76, 141, 255, 0.06), rgba(76, 141, 255, 0.012)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
+}
+
+.tile:hover, .try-link:hover, .limit:hover, .step:hover, .tech-row:hover {
+  border-color: rgba(76, 141, 255, 0.45);
+}
+
+#root .card:hover, #root .panel:hover {
+  border-color: rgba(76, 141, 255, 0.45);
+}
+
 /* ---------- pointer spotlight on cards ---------- */
 .tile, .party, .limit, .step, .try-link, .tech-row, .feed-row {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+#root .card, #root .panel {
   position: relative;
   overflow: hidden;
   isolation: isolate;
@@ -1172,10 +1206,32 @@ body {
   );
 }
 
+#root .card::before, #root .panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  background: radial-gradient(
+    420px circle at var(--mx, 50%) var(--my, 0%),
+    rgba(76, 141, 255, 0.22),
+    transparent 70%
+  );
+}
+
 .tile:hover::before, .party:hover::before, .limit:hover::before, .step:hover::before,
 .try-link:hover::before, .tech-row:hover::before, .feed-row:hover::before { opacity: 1; }
 
+#root .card:hover::before, #root .panel:hover::before { opacity: 1; }
+
 .tile > *, .party > *, .limit > *, .step > *, .try-link > *, .tech-row > *, .feed-row > * {
+  position: relative;
+  z-index: 1;
+}
+
+#root .card > *, #root .panel > * {
   position: relative;
   z-index: 1;
 }

@@ -125,7 +125,7 @@ export function Shell({
 
   // One delegated listener gives every card a spotlight that follows the pointer.
   useEffect(() => {
-    const cards = ".tile, .party, .limit, .step, .try-link, .tech-row, .feed-row";
+    const cards = ".tile, .party, .limit, .step, .try-link, .tech-row, .feed-row, .card, .panel";
     function onMove(event: PointerEvent) {
       const target = (event.target as HTMLElement | null)?.closest<HTMLElement>(cards);
       if (!target) {
