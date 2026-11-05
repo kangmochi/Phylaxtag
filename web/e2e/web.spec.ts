@@ -55,7 +55,7 @@ test("T38 status labels and next claim", async ({ page }) => {
   await expect(page.getByRole("dialog")).toContainText("next claim possible at");
 });
 
-test("banner is visible on every route", async ({ page }) => {
+test("testnet badge is visible on every route", async ({ page }) => {
   for (const path of [
     "/",
     "/asset/EB-001",
@@ -67,7 +67,7 @@ test("banner is visible on every route", async ({ page }) => {
     "/does-not-exist",
   ]) {
     await page.goto(path);
-    await expect(page.getByText("TESTNET DEMO")).toBeVisible();
+    await expect(page.locator(".tag")).toHaveText("Testnet");
   }
 });
 
@@ -84,7 +84,7 @@ test("unknown route shows Page not found with the shell around it", async ({ pag
   await page.goto("/does-not-exist");
   await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
   await expect(page.getByText("This page does not exist.")).toBeVisible();
-  await expect(page.getByText("TESTNET DEMO")).toBeVisible();
+  await expect(page.locator(".tag")).toHaveText("Testnet");
   await expect(page.getByRole("link", { name: "Back to Home" })).toBeVisible();
   await page.getByRole("link", { name: "Back to Home" }).click();
   await expect(page.getByRole("heading", { name: "The warranty travels with the bike" })).toBeVisible();
@@ -122,13 +122,14 @@ test("home page offers one Connect wallet entry point", async ({ page }) => {
   await expect(buttons).toHaveCount(0);
 });
 
-test("mobile: warranty table header is hidden and h1 is 1.6rem at 375px", async ({ page }) => {
+test("mobile: warranty table header is hidden and h1 is 2.25rem at 375px", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/");
   await expect(page.locator("#all-warranties tbody tr").first()).toBeVisible();
   await expect(page.locator("#all-warranties thead")).toBeHidden();
   const fontSize = await page.locator("h1").first().evaluate((el) => getComputedStyle(el).fontSize);
-  expect(Number.parseFloat(fontSize)).toBeCloseTo(25.6, 1);
+  // The hero h1 clamps between 2.25rem and 3.5rem; 375px sits at the floor.
+  expect(Number.parseFloat(fontSize)).toBeCloseTo(36, 1);
 });
 
 test("app CSS does not leak into the wallet modal host", async ({ page }) => {

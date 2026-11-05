@@ -19,6 +19,23 @@ export function useWalletPicker(): () => void {
   return useContext(WalletPickerContext);
 }
 
+/** The tag mark: a luggage tag with a keyring. Nav and footer use the same one. */
+export function BrandMark() {
+  return (
+    <svg viewBox="0 0 100 100" fill="none" aria-hidden="true">
+      <path
+        d="M36 16H80a6 6 0 0 1 6 6v56a6 6 0 0 1-6 6H36L14 52a2.4 2.4 0 0 1 0-4L36 16Z"
+        stroke="currentColor"
+        strokeWidth="6"
+        strokeLinejoin="round"
+      />
+      <circle cx="29" cy="50" r="3.6" stroke="currentColor" strokeWidth="5" />
+      <circle cx="58" cy="50" r="12.5" stroke="currentColor" strokeWidth="6" />
+      <path d="M58 30.5v39" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 /** A bundled local logo, or a neutral badge when no official file exists. */
 export function WalletLogo({ entry, size = 28 }: { entry: WalletEntry; size?: number }) {
   const src = walletLogo(entry.id);
@@ -103,84 +120,102 @@ export function Shell({
 
   return (
     <WalletPickerContext.Provider value={openWalletPicker}>
-      <header className="topline">
-        <p className="banner" role="status">TESTNET DEMO</p>
-        <button
-          type="button"
-          className="menu-toggle"
-          aria-expanded={menuOpen}
-          aria-controls="sidebar"
-          onClick={() => setMenuOpen((open) => !open)}
-        >
-          {menuOpen ? "Close menu" : "Menu"}
-        </button>
-      </header>
-      <div className="app">
-        <aside id="sidebar" className={menuOpen ? "sidebar open" : "sidebar"}>
-          <Link className="brand" to="/" aria-label="Phylaxtag home">
-            <svg viewBox="0 0 100 100" fill="none" aria-hidden="true">
-              <path
-                d="M36 16H80a6 6 0 0 1 6 6v56a6 6 0 0 1-6 6H36L14 52a2.4 2.4 0 0 1 0-4L36 16Z"
-                stroke="currentColor"
-                strokeWidth="6"
-                strokeLinejoin="round"
-              />
-              <circle cx="29" cy="50" r="3.6" stroke="currentColor" strokeWidth="5" />
-              <circle cx="58" cy="50" r="12.5" stroke="var(--accent-2)" strokeWidth="6" />
-              <path d="M58 30.5v39" stroke="var(--accent-2)" strokeWidth="6" strokeLinecap="round" />
-            </svg>
-            <span>Phylaxtag</span>
-          </Link>
+      <div className="topline">
+        <nav className="nav" aria-label="Main">
+          <div className="nav-inner">
+            <div className="brand-wrap">
+              <Link className="brand" to="/" aria-label="Phylaxtag home">
+                <BrandMark />
+                <span>Phylaxtag</span>
+              </Link>
+              <span className="tag">Testnet</span>
+            </div>
+            <button
+              type="button"
+              className="menu-toggle"
+              aria-expanded={menuOpen}
+              aria-controls="nav-menu"
+              onClick={() => setMenuOpen((open) => !open)}
+            >
+              {menuOpen ? "Close menu" : "Menu"}
+            </button>
+            <div id="nav-menu" className={menuOpen ? "nav-menu open" : "nav-menu"}>
+              <div className="nav-links" onClick={() => setMenuOpen(false)}>
+                <NavLink to="/" end>Home</NavLink>
+                <Link to={lastToken ? `/asset/${lastToken}` : "/#all-warranties"}>Warranty</Link>
+                <NavLink to="/issuer">Issuer</NavLink>
+                <NavLink to="/workshop">Workshop</NavLink>
+                <NavLink to="/how-it-works">How it works</NavLink>
+              </div>
 
-          <nav aria-label="Pages" onClick={() => setMenuOpen(false)}>
-            <NavLink to="/" end>Home</NavLink>
-            <Link to={lastToken ? `/asset/${lastToken}` : "/#all-warranties"}>Warranty</Link>
-            <NavLink to="/issuer">Issuer</NavLink>
-            <NavLink to="/workshop">Workshop</NavLink>
-            <NavLink to="/how-it-works">How it works</NavLink>
-          </nav>
-
-          <div className="account">
-            <span className="who">{accountId ? `Signed in as ${accountId}` : "Not signed in"}</span>
-            {testWalletEnabled
-              ? (
-                <>
-                  {TEST_ACCOUNTS.map((id) => (
-                    <button key={id} type="button" className="secondary" onClick={() => chain.useAccount(id)}>
-                      {id}
+              <div className="account">
+                {accountId ? <span className="who">Signed in as {accountId}</span> : null}
+                {testWalletEnabled
+                  ? (
+                    <>
+                      {TEST_ACCOUNTS.map((id) => (
+                        <button key={id} type="button" className="secondary" onClick={() => chain.useAccount(id)}>
+                          {id}
+                        </button>
+                      ))}
+                      <button type="button" className="secondary" onClick={openWalletPicker}>
+                        Choose a wallet
+                      </button>
+                    </>
+                  )
+                  : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (accountId) {
+                          void chain.disconnect();
+                        } else {
+                          openWalletPicker();
+                        }
+                      }}
+                    >
+                      {accountId ? "Disconnect" : "Connect wallet"}
                     </button>
-                  ))}
-                  <button type="button" className="secondary" onClick={openWalletPicker}>
-                    Choose a wallet
-                  </button>
-                </>
-              )
-              : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (accountId) {
-                      void chain.disconnect();
-                    } else {
-                      openWalletPicker();
-                    }
-                  }}
-                >
-                  {accountId ? "Disconnect" : "Connect wallet"}
-                </button>
-              )}
+                  )}
+              </div>
+            </div>
           </div>
-        </aside>
+        </nav>
+      </div>
 
-        <div className="column">
-          <main>{children}</main>
-          <footer className="foot">
-            <p className="note">
-              Contract: <AccountId id={config.contractId} />
-            </p>
-            <p className="disclaimer">{DISCLAIMER}</p>
-          </footer>
-        </div>
+      <div className="app">
+        <main>{children}</main>
+        <footer className="foot">
+          <div className="foot-inner">
+            <div className="foot-brand">
+              <Link className="brand" to="/" aria-label="Phylaxtag home">
+                <BrandMark />
+                <span>Phylaxtag</span>
+              </Link>
+              <p className="note">
+                A warranty that travels with the item. Each one carries its own fund and service book on
+                NEAR testnet.
+              </p>
+            </div>
+            <div>
+              <h2>Pages</h2>
+              <ul>
+                <li><Link to="/">Home</Link></li>
+                <li><Link to="/how-it-works">How it works</Link></li>
+                <li><Link to="/issuer">Issuer</Link></li>
+                <li><Link to="/workshop">Workshop</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h2>Resources</h2>
+              <ul>
+                <li><AccountId id={config.contractId} /></li>
+                <li><Link to="/how-it-works#supported-wallets">Supported wallets</Link></li>
+              </ul>
+            </div>
+          </div>
+          <p className="disclaimer">{DISCLAIMER}</p>
+        </footer>
       </div>
 
       {walletOpen ? (

@@ -12,6 +12,10 @@ interface Row {
   tokenId: string;
   title: string;
   fund: string;
+  /** Raw yoctoNEAR, so totals are summed as integers and never as floats. */
+  fundYocto: string;
+  cap: string;
+  capYocto: string;
   status: string;
   nextClaim: string;
   owner: string;
@@ -38,6 +42,9 @@ function toRow(token: NftToken, asset: AssetView): Row {
     tokenId: token.token_id,
     title: itemName(token.metadata?.title, token.token_id),
     fund: formatNear(asset.balance),
+    fundYocto: asset.balance,
+    cap: formatNear(asset.asset.claim_cap),
+    capYocto: asset.asset.claim_cap,
     status: asset.display_status,
     nextClaim: nextClaimShort(asset.next_claim_ns, {
       expired: asset.display_status.toLowerCase().includes("expired"),
@@ -160,25 +167,167 @@ export function HomePage({ chain, accountId }: { chain: Chain; accountId: string
     return rows.filter((row) => row.issuer === accountId && row.owner !== accountId);
   }, [rows, accountId]);
 
+  const totals = useMemo(() => {
+    if (!rows) {
+      return null;
+    }
+    let locked = 0n;
+    for (const row of rows) {
+      try {
+        locked += BigInt(row.fundYocto);
+      } catch {
+        // A malformed balance is left out of the total instead of breaking the page.
+      }
+    }
+    return {
+      count: rows.length,
+      locked: formatNear(locked),
+      active: rows.filter((row) => bucket(row.status) === "Active").length,
+    };
+  }, [rows]);
+
+  // The tiles show a real warranty, preferring the one named in PLAN.md.
+  const featured = rows?.find((row) => row.tokenId === "EB-005") ?? rows?.[0] ?? null;
+
   return (
     <article>
-      <header className="page-head">
-        <p className="eyebrow">Phylaxtag</p>
-        <h1>The warranty travels with the bike</h1>
-        <p className="lead">
-          Every warranty carries its own fund and service book on NEAR testnet. Sell the item and both
-          move to the next owner.
-        </p>
-        <p className="note">
-          To our knowledge, a working NFT-warranty implementation on NEAR. This is a testnet prototype.
-          The NFT is not proof of authenticity and is not a legal title.
-        </p>
-      </header>
+      <section className="hero">
+        <div className="hero-copy">
+          <p className="eyebrow">Warranty on NEAR testnet</p>
+          <h1>The warranty travels with the bike</h1>
+          <p className="hero-lead">
+            Every warranty is an NFT that carries its own fund and service book. Sell the item and both move
+            to the next owner: no email, no account, no paper booklet.
+          </p>
+          <div className="hero-actions">
+            <a className="button" href="#all-warranties">Get started</a>
+            <Link className="button secondary" to="/how-it-works">
+              How it works
+            </Link>
+          </div>
+          <p className="hero-fine">
+            Testnet only. The NFT is not proof of authenticity and is not a legal title.
+          </p>
+        </div>
+      </section>
 
-      <section className="card">
+      <section className="stats" aria-label="Live summary">
+        <div className="stat">
+          <span>Warranties</span>
+          <b>{totals ? totals.count : "—"}</b>
+        </div>
+        <div className="stat">
+          <span>NEAR in funds</span>
+          <b>{totals ? totals.locked : "—"}</b>
+        </div>
+        <div className="stat">
+          <span>Active</span>
+          <b>{totals ? totals.active : "—"}</b>
+        </div>
+        <div className="stat">
+          <span>Network</span>
+          <b>NEAR testnet</b>
+        </div>
+      </section>
+
+      <section className="home-block">
+        <div className="section-head">
+          <h2>What you can do here</h2>
+        </div>
+        <div className="tiles">
+          <a className="tile" href="#all-warranties">
+            <div>
+              <h3>Every warranty</h3>
+              <p>Fund, status and next claim for every warranty on the contract, filterable.</p>
+            </div>
+            <div className="tile-art" aria-hidden="true">
+              {(rows ?? []).slice(0, 3).map((row) => (
+                <div className="tile-row" key={row.tokenId}>
+                  <span className="mono">{row.tokenId}</span>
+                  <b>{row.fund}</b>
+                </div>
+              ))}
+              {!rows ? (
+                <div className="tile-row">
+                  <span className="mono">loading</span>
+                </div>
+              ) : null}
+            </div>
+          </a>
+
+          <a className="tile" href={featured ? `/asset/${featured.tokenId}` : "#all-warranties"}>
+            <div>
+              <h3>One warranty page</h3>
+              <p>Fund, claim rules, service book and holder history for a single item.</p>
+            </div>
+            <div className="tile-art" aria-hidden="true">
+              <div className="tile-row">
+                <span className="mono">{featured ? featured.tokenId : "—"}</span>
+                <b>{featured ? featured.fund : "—"}</b>
+              </div>
+              <div className="tile-row">
+                <span>Per claim cap</span>
+                <b>{featured ? featured.cap : "—"}</b>
+              </div>
+              <div className="tile-row">
+                <span>Next claim</span>
+                <b>{featured ? featured.nextClaim : "—"}</b>
+              </div>
+            </div>
+          </a>
+
+          <a className="tile" href={featured ? `/asset/${featured.tokenId}/owner` : "#all-warranties"}>
+            <div>
+              <h3>Workshop payout</h3>
+              <p>The holder pays a workshop straight from the warranty fund, inside the claim cap.</p>
+            </div>
+            <div className="tile-art" aria-hidden="true">
+              <div className="tile-row">
+                <span>Checked before signing</span>
+                <b>amount, cap, fund</b>
+              </div>
+              <div className="tile-row">
+                <span>Cooldown</span>
+                <b>read from the contract</b>
+              </div>
+              <div className="tile-row">
+                <span>Receipt</span>
+                <b>service book</b>
+              </div>
+            </div>
+          </a>
+
+          <a className="tile tile-wide" href="/issuer">
+            <div className="tile-copy">
+              <h3>Issuer console</h3>
+              <p>
+                Mint a warranty, fund it in NEAR, set the per-claim cap and the cooldown. Only accounts on
+                the issuer allowlist can mint.
+              </p>
+            </div>
+            <div className="tile-art" aria-hidden="true">
+              <div className="tile-row">
+                <span className="mono">token_id</span>
+                <b>next free id</b>
+              </div>
+              <div className="tile-row">
+                <span className="mono">fund</span>
+                <b>NEAR, paid by the issuer</b>
+              </div>
+              <div className="tile-row">
+                <span className="mono">claim cap · cooldown</span>
+                <b>per warranty</b>
+              </div>
+            </div>
+          </a>
+        </div>
+      </section>
+
+      <section className="home-block">
+        <p className="eyebrow">The app</p>
         <div className="section-head">
           <h2>All warranties</h2>
-          <a className="link" href="#all-warranties">View all</a>
+          {rows ? <span className="note">{rows.length} on the contract</span> : null}
         </div>
         <div className="chips">
           {FILTERS.map((name) => (
@@ -228,60 +377,67 @@ export function HomePage({ chain, accountId }: { chain: Chain; accountId: string
         ) : null}
       </section>
 
-      <section className="card">
-        <h2>My warranties</h2>
-        {accountId ? (
-          <>
-            <p className="note">Signed in as <AccountId id={accountId} />.</p>
-            {mineError ? <p className="alert" role="alert">{mineError}</p> : null}
-            {mine && mine.length > 0 ? (
+      <section className="home-block">
+        <div className="section-head">
+          <h2>Your side</h2>
+        </div>
+        <div className="tools">
+          <div className="card">
+            <h3>My warranties</h3>
+            {accountId ? (
               <>
-                <h3>Held by this account</h3>
-                <ul className="plain">
-                  {mine.map((token) => (
-                    <li key={token.token_id}>
-                      <Link to={`/asset/${token.token_id}`}>{token.token_id}</Link>
-                      {token.metadata?.title ? <span className="note"> · {token.metadata.title}</span> : null}
-                    </li>
-                  ))}
-                </ul>
+                <p className="note">Signed in as <AccountId id={accountId} />.</p>
+                {mineError ? <p className="alert" role="alert">{mineError}</p> : null}
+                {mine && mine.length > 0 ? (
+                  <>
+                    <h3>Held by this account</h3>
+                    <ul className="plain">
+                      {mine.map((token) => (
+                        <li key={token.token_id}>
+                          <Link to={`/asset/${token.token_id}`}>{token.token_id}</Link>
+                          {token.metadata?.title ? (
+                            <span className="note"> · {token.metadata.title}</span>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : null}
+                {mine && mine.length === 0 ? <p className="note">This account holds no warranties.</p> : null}
+                {issued.length > 0 ? (
+                  <>
+                    <h3>Issued by this account</h3>
+                    <ul className="plain">
+                      {issued.map((row) => (
+                        <li key={row.tokenId}>
+                          <Link to={`/asset/${row.tokenId}`}>{row.tokenId}</Link>
+                          <span className="note"> · held by {row.owner}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : null}
               </>
-            ) : null}
-            {mine && mine.length === 0 ? <p className="note">This account holds no warranties.</p> : null}
-            {issued.length > 0 ? (
-              <>
-                <h3>Issued by this account</h3>
-                <ul className="plain">
-                  {issued.map((row) => (
-                    <li key={row.tokenId}>
-                      <Link to={`/asset/${row.tokenId}`}>{row.tokenId}</Link>
-                      <span className="note"> · held by {row.owner}</span>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            ) : null}
-          </>
-        ) : (
-          <>
-            <p className="note">Connect a wallet to see your warranties.</p>
-          </>
-        )}
-      </section>
+            ) : (
+              <p className="note">Connect a wallet to see your warranties.</p>
+            )}
+          </div>
 
-      <section className="card">
-        <h2>Look up a warranty</h2>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            navigate(`/asset/${tokenId.trim()}`);
-          }}
-        >
-          <Field id="lookup" label="Warranty token id">
-            <input id="lookup" value={tokenId} onChange={(event) => setTokenId(event.target.value)} />
-          </Field>
-          <button type="submit">Open warranty</button>
-        </form>
+          <div className="card">
+            <h3>Look up a warranty</h3>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                navigate(`/asset/${tokenId.trim()}`);
+              }}
+            >
+              <Field id="lookup" label="Warranty token id">
+                <input id="lookup" value={tokenId} onChange={(event) => setTokenId(event.target.value)} />
+              </Field>
+              <button type="submit">Open warranty</button>
+            </form>
+          </div>
+        </div>
       </section>
     </article>
   );
