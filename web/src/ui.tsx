@@ -102,17 +102,22 @@ export function Shell({
   async function pickWallet(entry: WalletEntry) {
     setWalletError(null);
     setWalletBusy(entry.id);
+    // Close the picker first. It is a <dialog> in the top layer, so a wallet's
+    // own modal (WalletConnect QR, extension popups) would otherwise open
+    // behind it and look like nothing happened.
+    setWalletOpen(false);
     try {
       if (chain.connectWith) {
         await chain.connectWith(selectorIdOf(entry));
       } else {
         await chain.connect();
       }
-      setWalletOpen(false);
     } catch (caught) {
       // Refresh the unavailable list so a failed chunk is marked in this view too.
       setWalletUnavailable(chain.unavailableWallets?.() ?? []);
       setWalletError(walletProblem(entry.name, caught instanceof Error ? caught.message : String(caught)));
+      // Bring the list back with the message instead of leaving a blank page.
+      setWalletOpen(true);
     } finally {
       setWalletBusy(null);
     }
