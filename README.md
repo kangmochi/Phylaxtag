@@ -17,6 +17,8 @@ To our knowledge, a working NFT-warranty implementation on NEAR. This repository
 | Earlier token | `EB-004` — 5 claims paid, 0.05 NEAR left, 60 s cooldown |
 | Parent account | `phylaxtag-jiwoo-11041950.testnet` |
 
+| Deployment | Vercel builds `web/` on every push to `main`; the build needs `VITE_CONTRACT_ID`, `VITE_RPC_URL`, `VITE_NETWORK_ID`, and `VITE_WALLETCONNECT_PROJECT_ID` for the EVM group |
+
 ### Official contract
 
 Only `phylaxtag.phylaxtag-jiwoo-11041950.testnet` is this project. The contract code is public by nature: a NEAR contract ships as a WASM blob that anyone can download from the chain, so hiding the source would not prevent a copy. What a copy cannot do is take over these warranties, because a token is identified by its contract account plus `token_id`, and a redeployed copy lives under a different account id.
