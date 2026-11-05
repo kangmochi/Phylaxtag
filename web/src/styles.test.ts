@@ -47,6 +47,14 @@ describe("styles.css scoping (wallet modal leak guard)", () => {
     expect(offenders).toEqual([]);
   });
 
+  it("scopes .card and .app selectors under #root", () => {
+    const targets = /(^|[\s,>+~])\.(card|app)\b/;
+    const offenders = allRules
+      .filter((rule) => targets.test(rule.selector) && unscoped(rule.selector))
+      .map((rule) => rule.selector);
+    expect(offenders).toEqual([]);
+  });
+
   it("scopes every viewport-height rule under #root", () => {
     const hasViewportHeight = (body: string) =>
       body

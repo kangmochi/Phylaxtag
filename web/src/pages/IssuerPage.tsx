@@ -133,10 +133,29 @@ export function IssuerPage({
 
   const refund = closeAsset ? refundLine(closeAsset.asset.pending_refund) : null;
 
+  // Nothing on this page is useful without a wallet: the contract only accepts
+  // mints from an allowlisted issuer. Hide the form instead of letting a
+  // visitor fill it in and then fail at signing time.
+  if (!accountId) {
+    return (
+      <article>
+        <h1>Mint a warranty</h1>
+        <p>The serial is salted and hashed in this browser. Only the hash is sent.</p>
+        <div className="card">
+          <p>Connect an issuer wallet to mint warranties.</p>
+          <button type="button" onClick={() => void chain.connect()}>Connect wallet</button>
+        </div>
+      </article>
+    );
+  }
+
   return (
     <article>
       <h1>Mint a warranty</h1>
       <p>The serial is salted and hashed in this browser. Only the hash is sent.</p>
+      <p className="note">
+        Only accounts on the issuer allowlist can mint. Signed in as {accountId}.
+      </p>
       <form onSubmit={(event) => void mint(event)}>
         <button
           type="button"

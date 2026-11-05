@@ -80,13 +80,22 @@ export function createNearChain(config: AppConfig): Chain {
       setupModal(selected, { contractId: config.contractId, description: "Phylaxtag testnet demo" }).show();
     },
     async disconnect() {
-      const selected = await selector();
-      if (selected.isSignedIn()) {
-        const wallet = await selected.wallet();
-        await wallet.signOut();
-      }
+      // The wallet popup can stall (Meteor stays on "Receiving details from
+      // Dapp"). Clear the local session first, then give signOut at most 3 s.
       accountId = null;
       notify();
+      try {
+        const selected = await selector();
+        if (selected.isSignedIn()) {
+          const wallet = await selected.wallet();
+          await Promise.race([
+            wallet.signOut(),
+            new Promise<void>((resolve) => setTimeout(resolve, 3000)),
+          ]);
+        }
+      } catch {
+        // Local state is already cleared; a wallet that refuses to sign out is not fatal.
+      }
     },
     useAccount() {
       return undefined;
@@ -123,7 +132,8 @@ export function createNearChain(config: AppConfig): Chain {
       }
       const failure = failureMessage(outcome);
       if (failure) {
-        throw new Error(failure);
+        // Keep the hash so the page can still link the failed transaction.
+        throw Object.assign(new Error(failure), { hash: outcome.transaction_outcome?.id ?? "" });
       }
       return {
         hash: outcome.transaction_outcome?.id ?? "",

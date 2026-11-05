@@ -85,6 +85,16 @@ export class FakeContract {
       pending: null,
       history: [],
     }));
+    this.tokens.set("EB-FRESH", this.make({
+      tokenId: "EB-FRESH",
+      ownerId: "alice.test",
+      balance: (4n * NEAR).toString(),
+      expiryNs: (now + 365n * day * 1_000_000n).toString(),
+      lastClaim: null,
+      status: "Active",
+      pending: null,
+      history: [],
+    }));
     this.tokens.set("EB-EMPTY", this.make({
       tokenId: "EB-EMPTY",
       ownerId: "alice.test",

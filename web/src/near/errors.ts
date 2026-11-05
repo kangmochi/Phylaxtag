@@ -1,12 +1,15 @@
 /** Spec 8.4. Longer strings are matched first so one panic is not hidden by a shorter one. */
 
 const PANIC_PLAIN: ReadonlyArray<readonly [string, string]> = [
+  // Wallets surface a contract panic as a raw VM trap; nothing else can be read from it.
+  ["WebAssembly trap: unreachable opcode", "The contract rejected this request. Check the amount and the cooldown."],
+  ["unreachable opcode", "The contract rejected this request. Check the amount and the cooldown."],
   ["Requires attached deposit of exactly 1 yoctoNEAR", "This action needs a deposit of exactly 1 yoctoNEAR."],
   ["Amount must be > 0", "Enter an amount greater than 0."],
   ["Workshop not approved", "That workshop is not on the allowlist."],
   ["Cannot pay yourself", "The owner cannot be the workshop that gets paid."],
   ["Insufficient balance", "The warranty fund does not have that much left."],
-  ["Not an approved issuer", "This account is not an allowlisted issuer."],
+  ["Not an approved issuer", "This account is not an allowed issuer."],
   ["Cooldown must be > 0", "The cooldown must be greater than 0."],
   ["Serial already used", "This issuer already used that serial hash."],
   ["Bad workshop list", "The workshop list is empty, has a duplicate, or includes the issuer or the contract."],

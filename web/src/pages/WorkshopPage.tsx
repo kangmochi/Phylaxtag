@@ -58,7 +58,13 @@ export function WorkshopPage({ chain }: { chain: Chain }) {
       {rows ? (
         <section className="card">
           <h2>Payments received</h2>
-          {rows.length === 0 ? <p className="note">No matching service records.</p> : (
+          {rows.length === 0 ? (
+            <p className="note" role="status">
+              No payments found. {workshop.trim()} is not a workshop that was paid for warranty{" "}
+              {tokenId.trim()}. A workshop must be on the warranty workshop list, and only paid
+              claims are listed.
+            </p>
+          ) : (
             <table>
               <thead><tr><th>When (UTC)</th><th>Amount</th><th>Status</th><th>Warranty</th></tr></thead>
               <tbody>

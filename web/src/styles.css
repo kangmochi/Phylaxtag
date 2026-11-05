@@ -70,7 +70,7 @@ body {
    height: calc(100vh - 2.35rem) made every wallet row ~862px tall, which
    pushed the wallet buttons out of view. Keep new global element selectors
    scoped to #root as well. */
-.app {
+#root .app {
   display: grid;
   grid-template-columns: 248px minmax(0, 1fr);
   min-height: calc(100vh - 2rem);
@@ -173,7 +173,7 @@ body {
 }
 
 /* ---------- cards & forms ---------- */
-.card, #root form, #root dialog, #root article > section {
+#root .card, #root form, #root dialog, #root article > section {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -383,9 +383,9 @@ body {
 .plain li { padding: 0.35rem 0; border-bottom: 1px solid var(--line); font-size: 0.85rem; }
 .plain li:last-child { border-bottom: 0; }
 
-.card h2:first-child, section.card h2:first-of-type { margin-top: 0; }
+#root .card h2:first-child, #root section.card h2:first-of-type { margin-top: 0; }
 
-.card form { background: transparent; border: 0; padding: 0; margin: 0; }
+#root .card form { background: transparent; border: 0; padding: 0; margin: 0; }
 
 /* ---------- small screens ---------- */
 @media (max-width: 900px) {
@@ -409,12 +409,17 @@ body {
   .cols { grid-template-columns: minmax(0, 1fr); }
   #root main { padding: 1.2rem 1rem 1rem; }
   .foot { padding: 1rem; }
-  h1 { font-size: 1.6rem; }
+  /* #root h1 above sets 2rem and out-ranks a bare h1, so the small-screen
+     override has to carry the same specificity. 1.6rem = 25.6px. */
+  #root h1 { font-size: 1.6rem; }
 }
 
 @media (max-width: 480px) {
-  #root table, #root thead, #root tbody, #root th, #root td, #root tr { display: block; }
-  thead { display: none; }
+  #root table, #root tbody, #root th, #root td, #root tr { display: block; }
+  /* The stacked-card layout lists each cell's label with ::before, so the
+     header row must not render. The earlier bare `thead { display: none }`
+     lost to `#root thead { display: block }` in the rule above. */
+  #root thead { display: none; }
   #root tr { border-bottom: 1px solid var(--line); padding: 0.5rem 0; }
   #root td { border: 0; padding: 0.2rem 0; }
   #root td::before {
@@ -430,4 +435,16 @@ body {
 #near-wallet-selector-modal,
 #near-wallet-selector-modal * {
   font-family: var(--sans);
+}
+
+/* The Meteor module connects through @meteorwallet/sdk, which uses the
+   injected window.meteorWallet when the extension is present and otherwise
+   needs a popup, so say so in the picker. */
+#near-wallet-selector-modal .nws-modal-body::after {
+  content: "Meteor opens a popup window. Allow popups for this site.";
+  display: block;
+  margin: 0.9rem 0 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.4;
 }

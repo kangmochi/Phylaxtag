@@ -265,7 +265,6 @@ export function HomePage({ chain, accountId }: { chain: Chain; accountId: string
         ) : (
           <>
             <p className="note">Connect a wallet to see your warranties.</p>
-            <button type="button" onClick={() => void chain.connect()}>Connect wallet</button>
           </>
         )}
       </section>
