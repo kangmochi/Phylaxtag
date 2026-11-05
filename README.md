@@ -4,7 +4,20 @@ This e-bike has its own warranty fund. Sell the bike, and the fund and the servi
 
 Phylaxtag turns one physical item (MVP: one e-bike) into a NEP-171 NFT on NEAR. The warranty fund is stored on the token, so it moves with the NFT when the item is sold. The issuer funds it once at mint. The owner can never withdraw it. Phylax (φύλαξ) is Greek for "guardian": the warranty is a guardian that lives on the item and transfers with it.
 
-To our knowledge, a working NFT-warranty implementation on NEAR. This repository is a testnet prototype. The NFT is not proof of authenticity and is not a legal title. The contract can mint a warranty, pay an approved workshop, transfer the NFT, and close it after expiry. Those paths are covered by unit tests and by sandbox tests on a local chain. The web app is in `web/`. There is no testnet deploy yet, and the contract id in the example env is a placeholder, so a public-chain demo still needs a later deploy.
+To our knowledge, a working NFT-warranty implementation on NEAR. This repository is a testnet prototype. The NFT is not proof of authenticity and is not a legal title. The contract can mint a warranty, pay an approved workshop, transfer the NFT, and close it after expiry. Those paths are covered by unit tests and by sandbox tests on a local chain. The web app is in `web/` and is deployed on NEAR testnet (below).
+
+## Live demo (NEAR testnet)
+
+| What | Value |
+| --- | --- |
+| Web app | https://phylaxtag.vercel.app/ |
+| Contract | `phylaxtag.phylaxtag-jiwoo-11041950.testnet` |
+| Explorer | https://testnet.nearblocks.io/accounts/phylaxtag.phylaxtag-jiwoo-11041950.testnet |
+| Demo token | `EB-005` — fund 1.0 NEAR at mint, per-claim cap 0.3 NEAR, cooldown 900 s; one claim of 0.3 NEAR paid, 0.7 NEAR left (checked on chain 5 Nov 2026) |
+| Earlier token | `EB-004` — 5 claims paid, 0.05 NEAR left, 60 s cooldown |
+| Parent account | `phylaxtag-jiwoo-11041950.testnet` |
+
+Home labels: **All warranties** / **View all**. Wallets: NEAR wallets come first and **Meteor** is the recommended one; **MyNearWallet is retired** for new app connections. EVM wallets (MetaMask, Coinbase Wallet, WalletConnect QR) ship in this repository but the group is hidden unless `VITE_WALLETCONNECT_PROJECT_ID` is set at build time, and **no EVM sign-in has been verified yet**.
 
 ## How control passes on transfer
 
@@ -23,9 +36,9 @@ To our knowledge, a working NFT-warranty implementation on NEAR. This repository
 - Run `cargo fmt --check` in `contract/` and in `integration-tests/` - see no diff. CI runs this.
 - Run `cargo clippy --all-targets -- -D warnings` in `contract/` and in `integration-tests/` - see no warnings. CI runs this.
 - Run `cargo build --target wasm32-unknown-unknown --release` in `contract/` - see `contract/target/wasm32-unknown-unknown/release/phylaxtag.wasm`. The wasm file is gitignored.
-- Run `npm test` in `web/` - see 7 tests pass.
-- Run the web e2e tests in `web/` - see 3 tests pass.
-- Deploy to testnet - TODO (later). No contract id is deployed from this repository.
+- Run `npm test` in `web/` - see 56 tests pass (Vitest).
+- Run `npm run e2e` in `web/` - see 26 tests pass (Playwright).
+- Deploy to testnet - the live demo uses `phylaxtag.phylaxtag-jiwoo-11041950.testnet` under parent `phylaxtag-jiwoo-11041950.testnet`; the full procedure is in [docs/TESTNET_DEPLOY_GUIDE.md](docs/TESTNET_DEPLOY_GUIDE.md).
 
 ## Build
 
@@ -46,7 +59,7 @@ cargo build --target wasm32-unknown-unknown --release
 
 ## Deploy to testnet
 
-Not deployed yet. The user deploys with their own accounts and keys. This repository has no key, seed phrase, access token, or contract account.
+Deployed on NEAR testnet: contract `phylaxtag.phylaxtag-jiwoo-11041950.testnet` under parent `phylaxtag-jiwoo-11041950.testnet`. The user deployed with their own accounts and keys; this repository holds no key, seed phrase, access token, or contract account. The step-by-step guide, including account creation, mint, transfer, claim, Vercel environment values and post-submit cleanup, is in [docs/TESTNET_DEPLOY_GUIDE.md](docs/TESTNET_DEPLOY_GUIDE.md).
 
 Build the contract with the command in "Build". The wasm path is `contract/target/wasm32-unknown-unknown/release/phylaxtag.wasm`.
 
@@ -147,6 +160,8 @@ T06, T10, T19, T21, T22, and T36 check one part of the T26 invariant after every
 - `docs/phylaxtag-spec-v3.5.pdf` - spec v3.5, history
 - `docs/phylaxtag-spec-v3.4.pdf` - spec v3.4, history
 - `docs/DECISIONS.md` - pinned crate and npm versions, measured gas, and measured storage
+- `docs/TESTNET_DEPLOY_GUIDE.md` - deploy, mint, claim, Vercel setup, and post-submit cleanup
+- `docs/OPEN_QUESTIONS.md` - what is unverified or still a placeholder before submission
 - `.github/workflows/ci.yml` - contract fmt, clippy, and test, the sandbox job, and the web job, on pull requests and on pushes to `main`
 
 ## Status
@@ -166,7 +181,9 @@ The web app has the warranty page, the history page, the issuer page (mint and c
 
 Not built yet:
 
-- TODO (later): testnet deploy and a real contract id. T33 is a manual newcomer run.
+- T33 (newcomer run of this README) is still manual.
+- EVM sign-in, EVM meta-transactions and an EVM account passing the issuer allowlist: code ships, none of it verified yet. Open items are tracked in [docs/OPEN_QUESTIONS.md](docs/OPEN_QUESTIONS.md).
+- Above-cap issuer approval: removed in spec v3.7, future work only, not built.
 
 Callback gas is 5 TGas, from the sandbox measurement in `docs/DECISIONS.md`.
 
@@ -187,7 +204,8 @@ Web, pinned in `web/package.json` (licenses in `docs/DECISIONS.md`):
 - Vite 8.3.5, React 19.3.1, React DOM 19.3.1, React Router 8.5.1
 - TypeScript 6.0.3, typescript-eslint 8.72.1, ESLint 10.14.0
 - Vitest 5.1.0, Playwright 1.64.1
-- `@near-wallet-selector/core`, `modal-ui`, `my-near-wallet`, and `meteor-wallet` 10.1.4
+- `@near-wallet-selector/core`, `modal-ui`, `meteor-wallet`, `here-wallet`, `sender`, `nightly`, `bitte-wallet`, `intear-wallet`, `ledger`, and `my-near-wallet` (retired, hidden from the picker) 10.1.4
+- `@near-wallet-selector/ethereum-wallets` 10.1.4 with `wagmi` 2.19.5, `@wagmi/core` 2.21.1, `@wagmi/connectors` 5.10.2 (EVM group, hidden unless `VITE_WALLETCONNECT_PROJECT_ID` is set)
 - `@near-js/transactions` 2.5.1, `buffer` 6.0.3
 
 ## Run the web app locally
@@ -207,9 +225,9 @@ npm run dev
 - Run `npm run lint` in `web/` - see no lint errors.
 - Run `npm test` in `web/` - see 7 tests pass.
 - Run `npm run build` and then `npm run check:bundle` in `web/` - see "Production bundle is clean" and no test-wallet marker.
-- Run `npx playwright install chromium` once, then run the web e2e tests in `web/` - see 3 tests pass.
+- Run `npx playwright install chromium` once, then run `npm run e2e` in `web/` - see 26 tests pass (Playwright).
 
-The three browser tests are `T31 gated page access`, `T32 sell button flow`, and `T38 status labels and next claim`. They set `VITE_TEST_WALLET=1`, which is a build flag. That build talks to an in-memory contract and switches account labels. It has no keys. The production build resolves the same import to a disabled module, and `check:bundle` fails if the test marker or a Google Fonts URL is in `web/dist`.
+The browser suite (26 tests) covers `T31 gated page access`, `T32 sell button flow` and `T38 status labels and next claim`, plus the wallet picker at 375 px, the EVM group with a dummy project id, the mobile table header, and the issuer gate. They set `VITE_TEST_WALLET=1`, which is a build flag. That build talks to an in-memory contract and switches account labels. It has no keys. The production build resolves the same import to a disabled module, and `check:bundle` fails if the test marker or a Google Fonts URL is in `web/dist`.
 
 The JSON shapes in `web/src/test-wallet/fixtures/sandbox-views.json` were copied from one local sandbox mint: `get_asset`, `get_service_history`, `get_holder_history`, `get_storage_info`, `nft_token`, and `nft_metadata`. The unit test parses that file as text so the expiry nanoseconds stay exact. The Playwright state is a separate in-memory copy with the same field names and yoctoNEAR strings. A successful sandbox `expire` settles its callback before a test can read `pending_refund`, so the in-flight fixture uses the same yoctoNEAR string encoding as `balance`.
 
@@ -221,16 +239,24 @@ Gas attached by the app, from `web/src/near/gas.ts`: 15 TGas for `mint` (measure
 
 ## Demo script
 
-About 90 seconds, for the video. A public run needs a deployed testnet contract id, which this task does not create. With `VITE_TEST_WALLET=1` the same screens run locally against the in-memory contract: use the "Demo preset" on the issuer page, then the account buttons `issuer.test`, `alice.test`, and `budi.test`.
+About 90 seconds, for the video. The public run uses the deployed contract and the demo token `EB-005`; with `VITE_TEST_WALLET=1` the same screens run locally against the in-memory contract, using the "Demo preset" on the issuer page and the account buttons `issuer.test`, `alice.test`, and `budi.test`.
 
 1. The issuer opens the issuer page, mints EB-001, and the deposit preview is visible before the wallet opens. It shows the fund and the storage deposit, and it says unused storage deposit is refunded by the contract.
 2. The owner opens the holder page for EB-001, requests a service payment inside the cap, and the workshop is paid. The service record reads Paid.
 3. A claim over the cap is rejected. The page shows "That amount is over the per-claim cap." and the original contract string "Over cap".
 4. Optional: after expiry, close the warranty. While the refund transfer has not settled, the page shows "Refund in flight: X NEAR". The returned amount stays 0 until that transfer finishes.
 
-## AI disclosure
+## Team and AI disclosure
 
-Code written with Cursor AI agents (Cursor Grok 4.7), reviewed by the team. The contract, the sandbox tests, and this web app were produced that way. Library versions are listed above and in `docs/DECISIONS.md`. No other code-generation service was used.
+**Team (3 members, one human and two AI agents):** pranesta kresa (lead, human); Pharita (AI agent, spec, schedule and submission materials); Jiwoo (AI agent, red-team review, README and web fixes).
+
+**Who wrote what**
+
+- Smart contract, unit tests and sandbox tests: Cursor's coding agent (model as reported by the Cursor team; an earlier revision of this README said "Cursor Grok 4.7").
+- Web app in `web/`: Jiwoo, a Hermes agent running `deepseek-v4.1-flash` through OpenRouter.
+- Spec, schedule and submission materials: Pharita, a Grok agent on xAI; the spec owner names the exact model version.
+
+Both code-generation services are named above; no further code-generation service was used. Every change went through a pull request and a review; no agent holds a key or a seed phrase. An earlier revision of this README said that all code, including the web app, came from Cursor AI agents and that no other code-generation service was used; the lines above replace that sentence.
 
 ## License
 
