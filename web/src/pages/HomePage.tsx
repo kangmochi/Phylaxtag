@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 
 import { itemName, nextClaimShort } from "../copy";
@@ -103,9 +103,15 @@ export function HomePage({ chain, accountId }: { chain: Chain; accountId: string
   const [mineError, setMineError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [capped, setCapped] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
+  const [fresh, setFresh] = useState<Set<string>>(new Set());
+  const seen = useRef<Set<string>>(new Set());
+  const [now, setNow] = useState(() => Date.now());
 
-  async function loadAll() {
-    setLoading(true);
+  async function loadAll(silent = false) {
+    if (!silent) {
+      setLoading(true);
+    }
     setError(null);
     try {
       const { tokens: normalized, capped } = await collectTokens(chain, "nft_tokens", {});
@@ -120,7 +126,15 @@ export function HomePage({ chain, accountId }: { chain: Chain; accountId: string
           next.push(toRow(token, asset));
         }
       });
+      // A warranty that was not in the previous snapshot gets marked for a moment.
+      const added = next.filter((row) => !seen.current.has(row.tokenId)).map((row) => row.tokenId);
+      seen.current = new Set(next.map((row) => row.tokenId));
+      if (added.length > 0 && lastUpdated !== null) {
+        setFresh(new Set(added));
+        window.setTimeout(() => setFresh(new Set()), 8000);
+      }
       setRows(next);
+      setLastUpdated(Date.now());
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
@@ -130,6 +144,16 @@ export function HomePage({ chain, accountId }: { chain: Chain; accountId: string
 
   useEffect(() => {
     void loadAll();
+  }, []);
+
+  // Refresh from the chain every 30 s and keep the "updated" line honest.
+  useEffect(() => {
+    const refresh = window.setInterval(() => void loadAll(true), 30_000);
+    const clock = window.setInterval(() => setNow(Date.now()), 1_000);
+    return () => {
+      window.clearInterval(refresh);
+      window.clearInterval(clock);
+    };
   }, []);
 
   async function loadMine() {
@@ -188,6 +212,10 @@ export function HomePage({ chain, accountId }: { chain: Chain; accountId: string
 
   // The tiles show a real warranty, preferring the one named in PLAN.md.
   const featured = rows?.find((row) => row.tokenId === "EB-005") ?? rows?.[0] ?? null;
+  // Share of the fund one claim may take, as a ratio of two contract values.
+  const capShare = featured
+    ? Math.min(100, Math.max(0, Math.round((Number(featured.capYocto) / Math.max(1, Number(featured.fundYocto))) * 100)))
+    : 0;
 
   return (
     <article>
@@ -273,6 +301,9 @@ export function HomePage({ chain, accountId }: { chain: Chain; accountId: string
                 <span>Next claim</span>
                 <b>{featured ? featured.nextClaim : "—"}</b>
               </div>
+              <div className="tile-bar" aria-hidden="true">
+                <span style={{ width: `${capShare}%` }} />
+              </div>
             </div>
           </a>
 
@@ -327,7 +358,11 @@ export function HomePage({ chain, accountId }: { chain: Chain; accountId: string
         <p className="eyebrow">The app</p>
         <div className="section-head">
           <h2>All warranties</h2>
-          {rows ? <span className="note">{rows.length} on the contract</span> : null}
+          {rows ? (
+            <span className="note">
+              {rows.length} on the contract · updated {lastUpdated ? `${Math.max(0, Math.round((now - lastUpdated) / 1000))}s` : "now"} ago
+            </span>
+          ) : null}
         </div>
         <div className="chips">
           {FILTERS.map((name) => (
@@ -348,7 +383,13 @@ export function HomePage({ chain, accountId }: { chain: Chain; accountId: string
             <button type="button" onClick={() => void loadAll()}>Try again</button>
           </div>
         ) : null}
-        {loading && !rows ? <p className="note" role="status">Loading warranties.</p> : null}
+        {loading && !rows ? (
+          <div className="skeleton-list" role="status" aria-label="Loading warranties">
+            {[0, 1, 2, 3, 4].map((index) => (
+              <div className="skeleton-row" key={index} style={{ animationDelay: `${index * 90}ms` }} />
+            ))}
+          </div>
+        ) : null}
         {rows && visible.length === 0 ? <p className="note">No warranties match this filter.</p> : null}
         {capped ? <p className="note">Showing up to 500 warranties.</p> : null}
         {visible.length > 0 ? (
@@ -364,7 +405,7 @@ export function HomePage({ chain, accountId }: { chain: Chain; accountId: string
             </thead>
             <tbody>
               {visible.map((row) => (
-                <tr key={row.tokenId}>
+                <tr key={row.tokenId} className={fresh.has(row.tokenId) ? "row-new" : undefined}>
                   <td data-label="Warranty"><Link to={`/asset/${row.tokenId}`}>{row.tokenId}</Link></td>
                   <td data-label="Item">{row.title || "—"}</td>
                   <td data-label="Fund">{row.fund}</td>

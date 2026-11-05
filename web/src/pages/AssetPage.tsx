@@ -11,6 +11,30 @@ import type { AssetView, HolderHistory, NftToken, ServiceRecord } from "../near/
 import { normalizeAssetView, normalizeHolderHistory, normalizeNftToken, normalizeServiceHistory } from "../near/views";
 import { AccountId, LoadError, TxNotice, rememberToken, type TxState } from "../ui";
 
+
+/** Payment amounts as a small line: the shape of the service history at a glance. */
+function PaymentSparkline({ amounts }: { amounts: string[] }) {
+  if (amounts.length < 2) {
+    return null;
+  }
+  const values = amounts.map((amount) => Number(amount)).filter((value) => Number.isFinite(value));
+  if (values.length < 2) {
+    return null;
+  }
+  const max = Math.max(...values, 1);
+  const width = 120;
+  const height = 28;
+  const step = width / (values.length - 1);
+  const points = values
+    .map((value, index) => `${(index * step).toFixed(1)},${(height - (value / max) * (height - 4) - 2).toFixed(1)}`)
+    .join(" ");
+  return (
+    <svg className="spark" viewBox={`0 0 ${width} ${height}`} width={width} height={height} role="img" aria-label="Payment amounts in order">
+      <polyline points={points} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function AssetPage({ chain, explorer }: { chain: Chain; explorer: (hash: string) => string }) {
   const { tokenId = "" } = useParams();
   const [asset, setAsset] = useState<AssetView | null | undefined>(undefined);
@@ -123,7 +147,10 @@ export function AssetPage({ chain, explorer }: { chain: Chain; explorer: (hash: 
       </div>
 
       <section className="card">
-        <h2>Recent services</h2>
+        <div className="section-head">
+          <h2>Recent services</h2>
+          <PaymentSparkline amounts={services.map((row) => row.amount)} />
+        </div>
         <ServiceTable rows={services} />
         <p><Link to={`/asset/${tokenId}/history`}>Full history</Link></p>
       </section>
