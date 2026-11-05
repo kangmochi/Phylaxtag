@@ -25,15 +25,7 @@ export function WalletLogo({ entry, size = 28 }: { entry: WalletEntry; size?: nu
   if (src) {
     if (isWideLogo(entry.id)) {
       // A wordmark keeps its own width at the same height.
-      return (
-        <img
-          className="wallet-logo wallet-logo-wide"
-          src={src}
-          alt=""
-          height={size}
-          style={{ height: size }}
-        />
-      );
+      return <img className="wallet-logo wallet-logo-wide" src={src} alt="" />;
     }
     return (
       <img
