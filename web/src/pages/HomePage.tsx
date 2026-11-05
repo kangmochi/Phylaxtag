@@ -5,7 +5,8 @@ import { itemName, nextClaimShort } from "../copy";
 import { formatNear } from "../near/amounts";
 import type { Chain } from "../near/chain";
 import type { AssetView, NftToken } from "../near/types";
-import { normalizeAssetView, normalizeNftToken } from "../near/views";
+import { normalizeAssetView, normalizeNftToken, normalizeServiceHistory } from "../near/views";
+import { formatTimeNs } from "../near/time";
 import { AccountId, Field } from "../ui";
 
 interface Row {
@@ -18,6 +19,8 @@ interface Row {
   capYocto: string;
   status: string;
   nextClaim: string;
+  nextClaimNs: string | null;
+  cooldownNs: string;
   owner: string;
   issuer: string;
 }
@@ -46,6 +49,8 @@ function toRow(token: NftToken, asset: AssetView): Row {
     cap: formatNear(asset.asset.claim_cap),
     capYocto: asset.asset.claim_cap,
     status: asset.display_status,
+    nextClaimNs: asset.next_claim_ns,
+    cooldownNs: asset.asset.cooldown_ns,
     nextClaim: nextClaimShort(asset.next_claim_ns, {
       expired: asset.display_status.toLowerCase().includes("expired"),
       empty: asset.balance === "0",
@@ -53,6 +58,47 @@ function toRow(token: NftToken, asset: AssetView): Row {
     owner: asset.owner_id,
     issuer: asset.asset.issuer,
   };
+}
+
+interface FeedRow {
+  tokenId: string;
+  amount: string;
+  workshop: string;
+  when: string;
+}
+
+/** Whole seconds left until the next claim, or null when a claim is possible now. */
+function secondsUntil(ns: string | null, nowMs: number): number | null {
+  if (!ns) {
+    return null;
+  }
+  try {
+    const diff = Number(BigInt(ns) / 1_000_000n) - nowMs;
+    return diff > 0 ? Math.floor(diff / 1000) : 0;
+  } catch {
+    return null;
+  }
+}
+
+function formatCountdown(totalSeconds: number): string {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return hours > 0 ? `${hours}h ${pad(minutes)}m ${pad(seconds)}s` : `${pad(minutes)}m ${pad(seconds)}s`;
+}
+
+/** Cooldown in whole minutes, e.g. "15m", for the step cards. */
+function cooldownLabel(ns: string): string {
+  try {
+    const seconds = Number(BigInt(ns) / 1_000_000_000n);
+    if (seconds >= 3600) {
+      return `${Math.round(seconds / 3600)}h`;
+    }
+    return `${Math.max(1, Math.round(seconds / 60))}m`;
+  } catch {
+    return "—";
+  }
 }
 
 const PAGE_SIZE = 50;
@@ -104,6 +150,7 @@ export function HomePage({ chain, accountId }: { chain: Chain; accountId: string
   const [loading, setLoading] = useState(true);
   const [capped, setCapped] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
+  const [activity, setActivity] = useState<FeedRow[] | null>(null);
   const [fresh, setFresh] = useState<Set<string>>(new Set());
   const seen = useRef<Set<string>>(new Set());
   const [now, setNow] = useState(() => Date.now());
@@ -135,10 +182,44 @@ export function HomePage({ chain, accountId }: { chain: Chain; accountId: string
       }
       setRows(next);
       setLastUpdated(Date.now());
+      void loadActivity(next);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadActivity(next: Row[]) {
+    const candidates = next.filter((row) => Number(row.fundYocto) > 0).slice(0, 3);
+    if (candidates.length === 0) {
+      setActivity([]);
+      return;
+    }
+    try {
+      const pages = await Promise.all(
+        candidates.map((row) =>
+          chain.view("get_service_history", { token_id: row.tokenId, from_index: 0, limit: 5 }),
+        ),
+      );
+      const feed: FeedRow[] = [];
+      candidates.forEach((row, index) => {
+        const records = normalizeServiceHistory(pages[index]) ?? [];
+        records
+          .filter((record) => record.status === "Paid")
+          .forEach((record) => {
+            feed.push({
+              tokenId: row.tokenId,
+              amount: formatNear(record.amount),
+              workshop: record.workshop,
+              when: formatTimeNs(record.timestamp_ns),
+            });
+          });
+      });
+      setActivity(feed.slice(0, 4));
+    } catch {
+      // The feed is decoration with real data; a failed read leaves it empty.
+      setActivity([]);
     }
   }
 
@@ -213,6 +294,9 @@ export function HomePage({ chain, accountId }: { chain: Chain; accountId: string
   // The tiles show a real warranty, preferring the one named in PLAN.md.
   const featured = rows?.find((row) => row.tokenId === "EB-005") ?? rows?.[0] ?? null;
   // Share of the fund one claim may take, as a ratio of two contract values.
+  const remaining = featured ? secondsUntil(featured.nextClaimNs, now) : null;
+  const countdown = remaining === null || remaining === 0 ? "possible now" : formatCountdown(remaining);
+
   const capShare = featured
     ? Math.min(100, Math.max(0, Math.round((Number(featured.capYocto) / Math.max(1, Number(featured.fundYocto))) * 100)))
     : 0;
@@ -237,6 +321,39 @@ export function HomePage({ chain, accountId }: { chain: Chain; accountId: string
             Testnet only. The NFT is not proof of authenticity and is not a legal title.
           </p>
         </div>
+
+        <div className="hero-visual">
+          <div className="panel">
+            <div className="panel-head">
+              <span className="panel-id">{featured ? featured.tokenId : "—"}</span>
+              <span className={featured && bucket(featured.status) === "Active" ? "pill" : "pill is-muted"}>
+                {featured ? featured.status : "loading"}
+              </span>
+            </div>
+            <p className="panel-amount">{featured ? featured.fund : "—"}</p>
+            <p className="panel-sub">Warranty fund on the contract</p>
+            <div className="bar">
+              <span style={{ width: `${capShare}%` }} />
+            </div>
+            <p className="panel-sub">
+              One claim can take up to {featured ? featured.cap : "—"} of this fund
+            </p>
+            <div className="panel-rows">
+              <div>
+                <span>Item</span>
+                <b>{featured ? featured.title || "—" : "—"}</b>
+              </div>
+              <div>
+                <span>Next claim</span>
+                <b className="panel-countdown">{countdown}</b>
+              </div>
+            </div>
+            <div className="panel-foot">
+              <span className="panel-sub">Read live from the contract</span>
+              {featured ? <Link to={`/asset/${featured.tokenId}`}>Open {featured.tokenId} →</Link> : null}
+            </div>
+          </div>
+        </div>
       </section>
 
       <section className="stats" aria-label="Live summary">
@@ -256,6 +373,79 @@ export function HomePage({ chain, accountId }: { chain: Chain; accountId: string
           <span>Network</span>
           <b>NEAR testnet</b>
         </div>
+      </section>
+
+      <section className="home-block">
+        <p className="eyebrow">How it works</p>
+        <div className="section-head">
+          <h2>Three moves, no paperwork</h2>
+        </div>
+        <div className="steps">
+          <div className="step">
+            <span className="step-num">01</span>
+            <h3>Issue and fund</h3>
+            <p>The maker mints the warranty and puts NEAR in it, with a per-claim cap and a cooldown.</p>
+            <div className="step-art" aria-hidden="true">
+              <div className="tile-row"><span className="mono">token_id</span><b>next free id</b></div>
+              <div className="tile-row"><span className="mono">fund</span><b>NEAR, paid by the issuer</b></div>
+              <div className="tile-row">
+                <span className="mono">cap · cooldown</span>
+                <b>{featured ? `${featured.cap} · ${cooldownLabel(featured.cooldownNs)}` : "per warranty"}</b>
+              </div>
+            </div>
+          </div>
+          <div className="step">
+            <span className="step-num">02</span>
+            <h3>Pay a workshop</h3>
+            <p>
+              The holder pays an approved workshop straight from the fund, inside the cap. Every payment
+              lands in the service book.
+            </p>
+            <div className="step-art" aria-hidden="true">
+              <div className="tile-row"><span>Checked before signing</span><b>amount, cap, fund</b></div>
+              <div className="tile-row"><span>Cooldown</span><b>read from the contract</b></div>
+              <div className="tile-row"><span>Receipt</span><b>service book</b></div>
+            </div>
+          </div>
+          <div className="step">
+            <span className="step-num">03</span>
+            <h3>Sell the item</h3>
+            <p>
+              One transfer moves the NFT, the remaining fund and the whole service history to the new
+              owner. Nothing to re-issue.
+            </p>
+            <div className="step-art" aria-hidden="true">
+              <div className="tile-row"><span>Fund</span><b>stays with the token</b></div>
+              <div className="tile-row"><span>Service book</span><b>stays with the token</b></div>
+              <div className="tile-row"><span>Approvals</span><b>cleared on transfer</b></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="home-block">
+        <div className="section-head">
+          <h2>Latest payments</h2>
+          <span className="note">the four newest claims, read from the contract</span>
+        </div>
+        {activity && activity.length > 0 ? (
+          <div className="feed">
+            {activity.map((row) => (
+              <div className="feed-row" key={`${row.tokenId}-${row.when}-${row.amount}`}>
+                <span className="kind is-claim">Claim</span>
+                <span>
+                  <b>{row.tokenId}</b> · paid to {row.workshop}
+                </span>
+                <b>{row.amount}</b>
+                <span className="feed-when">{row.when}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="note">
+            {activity ? "No paid claim on the newest warranties yet." : "Loading the latest payments."}
+          </p>
+        )}
       </section>
 
       <section className="home-block">
