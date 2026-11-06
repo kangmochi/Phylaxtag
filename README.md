@@ -1,5 +1,9 @@
 # Phylaxtag
 
+<p align="center">
+  <img src="docs/brand/readme-banner.png" alt="Phylaxtag — a warranty that lives inside the item, on NEAR testnet" width="100%">
+</p>
+
 This e-bike has its own warranty fund. Sell the bike, and the fund and the service book move with it.
 
 Phylaxtag turns one physical item (MVP: one e-bike) into a NEP-171 NFT on NEAR. The warranty fund is stored on the token, so it moves with the NFT when the item is sold. The issuer funds it once at mint. The owner can never withdraw it. Phylax (φύλαξ) is Greek for "guardian": the warranty is a guardian that lives on the item and transfers with it.
@@ -18,6 +22,12 @@ To our knowledge, a working NFT-warranty implementation on NEAR. This repository
 | Parent account | `phylaxtag-jiwoo-11041950.testnet` |
 
 | Deployment | Vercel builds `web/` on every push to `main`; the build needs `VITE_CONTRACT_ID`, `VITE_RPC_URL`, `VITE_NETWORK_ID`, and `VITE_WALLETCONNECT_PROJECT_ID` for the EVM group |
+
+<p align="center">
+  <img src="docs/brand/app-home.png" alt="Phylaxtag on NEAR testnet: warranty EB-005 with 0.7 NEAR left in the fund and a 0.3 NEAR per-claim cap" width="100%">
+</p>
+
+<p align="center"><sub>The live deployment: warranty <code>EB-005</code>, 0.7 NEAR left in the fund, 0.3 NEAR per-claim cap.</sub></p>
 
 ### What a visitor can try
 
