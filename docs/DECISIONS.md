@@ -173,3 +173,11 @@ Checked on 4 November 2026 (Asia/Jakarta) against [Vercel’s Node.js versions](
 `web/package.json` sets `engines.node` to `>=24`. That is the lowest major this app can state without a minor pin: `react-router` 8.5.1 requires Node `>=22.22`, and ESLint 10.14.0 requires `^22.13` or `>=24`. A Vercel 22.x selection is only the major, so 22 is not the minimum this repo advertises. `>=24` includes 24.x and 26.x. `web/.nvmrc` stays `26.13.0`, which satisfies `>=24`. CI still installs that file through `node-version-file`. No Node package was upgraded.
 
 `web/vercel.json` sets `installCommand` to `npm ci`, `buildCommand` to `npm run build`, and `outputDirectory` to `dist`. The SPA rewrite sends `/(.*)` to `/index.html`. Vercel’s project-configuration docs give the filesystem precedence over rewrites, so a real file in `dist` is not replaced. The Vercel project root has to be `web/` for that file to be the project config. There is no deploy yet.
+
+## Repository history
+
+This repository was created on 5 November 2026 (Asia/Jakarta) after the earlier working
+repository was archived as private. The history was moved across with its original author
+dates, so the earliest commits are dated 4 November 2026, one day before this repository
+existed. A commit date here records when the change was written, not when it was pushed. Every
+commit falls inside the hackathon window (1-14 November 2026).
