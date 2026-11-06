@@ -36,6 +36,21 @@ export function BrandMark() {
   );
 }
 
+
+/**
+ * The one honest EVM entry represents whichever extension owns window.ethereum,
+ * so it cannot carry a brand mark. This is a neutral wallet outline (Lucide
+ * "wallet-minimal", ISC licence), not a logo of any wallet.
+ */
+export function GenericWalletGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M17 14h.01" />
+      <path d="M7 7h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14" />
+    </svg>
+  );
+}
+
 /** A bundled local logo, or a neutral badge when no official file exists. */
 export function WalletLogo({ entry, size = 28 }: { entry: WalletEntry; size?: number }) {
   const src = walletLogo(entry.id);
@@ -53,6 +68,15 @@ export function WalletLogo({ entry, size = 28 }: { entry: WalletEntry; size?: nu
         height={size}
         style={{ width: size, height: size }}
       />
+    );
+  }
+  if (entry.id === "evm-injected") {
+    // Generic entry: a neutral wallet mark instead of a made-up brand or a
+    // bare letter that reads like a placeholder.
+    return (
+      <span className="wallet-logo wallet-logo-glyph" style={{ width: size, height: size }} aria-hidden="true">
+        <GenericWalletGlyph />
+      </span>
     );
   }
   return (

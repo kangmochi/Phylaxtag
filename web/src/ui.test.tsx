@@ -34,6 +34,17 @@ describe("WalletPicker", () => {
     expect(html).toContain("Meteor opens a popup window. Allow popups for this site.");
   });
 
+  it("draws the generic wallet mark for the Other wallet entry", () => {
+    const evm = WALLETS.find((wallet) => wallet.id === "evm-injected");
+    if (!evm) throw new Error("evm-injected missing");
+    const html = renderToStaticMarkup(<WalletLogo entry={evm} />);
+    expect(html).toContain("wallet-logo-glyph");
+    expect(html).toContain("<svg");
+    // No borrowed brand and no bare letter that reads like a placeholder.
+    expect(html).not.toContain("wallet-logo-fallback");
+    expect(html).not.toContain(">O<");
+  });
+
   it("shows a readable problem instead of failing silently", () => {
     const html = renderToStaticMarkup(
       <WalletPicker

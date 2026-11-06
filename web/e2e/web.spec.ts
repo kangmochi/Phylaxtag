@@ -367,10 +367,10 @@ test("the EVM group appears after the NEAR wallets with logos or fallbacks", asy
   expect(await dialog.locator("li").count()).toBe(8);
   await expect(dialog.getByRole("button", { name: "MyNearWallet" })).toBeDisabled();
 
-  // Every row carries a bundled logo or the neutral initial badge.
+  // Every row carries a bundled logo, the neutral initial badge, or the generic wallet mark.
   const rows = dialog.locator("li");
   const rowCount = await rows.count();
-  const withArt = await dialog.locator("img.wallet-logo, .wallet-logo-fallback").count();
+  const withArt = await dialog.locator("img.wallet-logo, .wallet-logo-fallback, .wallet-logo-glyph").count();
   expect(withArt).toBe(rowCount);
   expect(await dialog.locator("img.wallet-logo").count()).toBeGreaterThan(0);
 

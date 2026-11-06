@@ -745,6 +745,22 @@ body {
   }
 }
 
+.wallet-logo-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  border-radius: 6px;
+}
+
+.wallet-logo-glyph svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.wallet-logo-glyph:hover { color: var(--text); }
+
 .wallet-logo-fallback {
   display: inline-flex;
   align-items: center;
