@@ -12,23 +12,24 @@ To our knowledge, a working NFT-warranty implementation on NEAR. This repository
 | --- | --- |
 | Web app | https://phylaxtag.vercel.app/ |
 | X | https://x.com/Phylaxtag |
-| Contract | `phylaxtag.phylaxtag-jiwoo-11041950.testnet` |
-| Explorer | https://testnet.nearblocks.io/accounts/phylaxtag.phylaxtag-jiwoo-11041950.testnet |
-| Demo token | `EB-005` — fund 1.0 NEAR at mint, per-claim cap 0.3 NEAR, cooldown 900 s; one claim of 0.3 NEAR paid, 0.7 NEAR left (checked on chain 5 Nov 2026) |
-| Earlier token | `EB-004` — 5 claims paid, 0.05 NEAR left, 60 s cooldown |
+| Contract | `demo.phylaxtag-jiwoo-11041950.testnet` |
+| Explorer | https://testnet.nearblocks.io/accounts/demo.phylaxtag-jiwoo-11041950.testnet |
+| Demo token | `EB-005` — fund 1.0 NEAR at mint, per-claim cap 0.3 NEAR, cooldown 900 s; one claim of 0.3 NEAR paid, 0.7 NEAR left (checked on chain 6 Nov 2026) |
 | Parent account | `phylaxtag-jiwoo-11041950.testnet` |
 
 | Deployment | Vercel builds `web/` on every push to `main`; the build needs `VITE_CONTRACT_ID`, `VITE_RPC_URL`, `VITE_NETWORK_ID`, and `VITE_WALLETCONNECT_PROJECT_ID` for the EVM group |
 
 ### Official contract
 
-Only `phylaxtag.phylaxtag-jiwoo-11041950.testnet` is this project. The contract code is public by nature: a NEAR contract ships as a WASM blob that anyone can download from the chain, so hiding the source would not prevent a copy. What a copy cannot do is take over these warranties, because a token is identified by its contract account plus `token_id`, and a redeployed copy lives under a different account id.
+Only `demo.phylaxtag-jiwoo-11041950.testnet` is this project. An earlier testnet contract,
+`phylaxtag.phylaxtag-jiwoo-11041950.testnet`, is kept as an archive: it holds the first round of
+demo tokens and is no longer used by the app. The contract code is public by nature: a NEAR contract ships as a WASM blob that anyone can download from the chain, so hiding the source would not prevent a copy. What a copy cannot do is take over these warranties, because a token is identified by its contract account plus `token_id`, and a redeployed copy lives under a different account id.
 
 To check what is actually deployed, read the code over RPC and hash the returned bytes. At the time of writing (6 Nov 2026) this prints `df5e5e69b98a74b292aba07bb68c2ccb816b79f2b312fb36b89a4a8d02f34f79` for 367,032 bytes:
 
 ```bash
 curl -s https://rpc.testnet.fastnear.com -H 'content-type: application/json' \
-  -d '{"jsonrpc":"2.0","id":1,"method":"query","params":{"request_type":"view_code","finality":"final","account_id":"phylaxtag.phylaxtag-jiwoo-11041950.testnet"}}' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"query","params":{"request_type":"view_code","finality":"final","account_id":"demo.phylaxtag-jiwoo-11041950.testnet"}}' \
   | jq -r .result.code_base64 | base64 -d | sha256sum
 ```
 
@@ -55,7 +56,7 @@ Home labels: **All warranties**, **Your side**. Wallets: NEAR wallets come first
 - Run `cargo build --target wasm32-unknown-unknown --release` in `contract/` - see `contract/target/wasm32-unknown-unknown/release/phylaxtag.wasm`. The wasm file is gitignored.
 - Run `npm test` in `web/` - see 58 tests pass (Vitest).
 - Run `npm run e2e` in `web/` - see 27 tests pass (Playwright).
-- Deploy to testnet - the live demo uses `phylaxtag.phylaxtag-jiwoo-11041950.testnet` under parent `phylaxtag-jiwoo-11041950.testnet`; the full procedure is in [docs/TESTNET_DEPLOY_GUIDE.md](docs/TESTNET_DEPLOY_GUIDE.md).
+- Deploy to testnet - the live demo uses `demo.phylaxtag-jiwoo-11041950.testnet` under parent `phylaxtag-jiwoo-11041950.testnet`; the full procedure is in [docs/TESTNET_DEPLOY_GUIDE.md](docs/TESTNET_DEPLOY_GUIDE.md).
 
 ## Build
 
@@ -76,7 +77,7 @@ cargo build --target wasm32-unknown-unknown --release
 
 ## Deploy to testnet
 
-Deployed on NEAR testnet: contract `phylaxtag.phylaxtag-jiwoo-11041950.testnet` under parent `phylaxtag-jiwoo-11041950.testnet`. The user deployed with their own accounts and keys; this repository holds no key, seed phrase, access token, or contract account. The step-by-step guide, including account creation, mint, transfer, claim, Vercel environment values and post-submit cleanup, is in [docs/TESTNET_DEPLOY_GUIDE.md](docs/TESTNET_DEPLOY_GUIDE.md).
+Deployed on NEAR testnet: contract `demo.phylaxtag-jiwoo-11041950.testnet` under parent `phylaxtag-jiwoo-11041950.testnet`. The user deployed with their own accounts and keys; this repository holds no key, seed phrase, access token, or contract account. The step-by-step guide, including account creation, mint, transfer, claim, Vercel environment values and post-submit cleanup, is in [docs/TESTNET_DEPLOY_GUIDE.md](docs/TESTNET_DEPLOY_GUIDE.md).
 
 Build the contract with the command in "Build". The wasm path is `contract/target/wasm32-unknown-unknown/release/phylaxtag.wasm`.
 

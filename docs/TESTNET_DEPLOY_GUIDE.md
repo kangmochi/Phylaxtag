@@ -14,11 +14,10 @@ Markers on commands:
 | Item | Value |
 | --- | --- |
 | Parent (testnet) | `phylaxtag-jiwoo-11041950.testnet` **[live]** |
-| Contract | `phylaxtag.phylaxtag-jiwoo-11041950.testnet` **[live]** |
-| Explorer | https://testnet.nearblocks.io/accounts/phylaxtag.phylaxtag-jiwoo-11041950.testnet |
+| Contract | `demo.phylaxtag-jiwoo-11041950.testnet` **[live]** |
+| Explorer | https://testnet.nearblocks.io/accounts/demo.phylaxtag-jiwoo-11041950.testnet |
 | Web app | https://phylaxtag.vercel.app/ **[live]** |
-| Demo token | `EB-005` — cap 0.3 NEAR, cooldown 900 s, expiry 2030-01-01; one claim of 0.3 NEAR paid, 0.7 NEAR left (RPC check, 5 Nov 2026) **[live]** |
-| Earlier token | `EB-004` — 5 claims paid, 0.05 NEAR left, cap 0.3 NEAR, cooldown 60 s **[live]** |
+| Demo token | `EB-005` — cap 0.3 NEAR, cooldown 900 s, expiry 2030-01-01; one claim of 0.3 NEAR paid, 0.7 NEAR left (RPC check, 6 Nov 2026) **[live]** |
 
 If you redeploy under a new parent, replace `$PARENT` everywhere below. Never reuse a production seed, and never put one in chat or in a file.
 
@@ -166,7 +165,7 @@ Environment variables (public build-time values, not secrets). Set them for **Pr
 
 | Name | Value |
 | --- | --- |
-| `VITE_CONTRACT_ID` | `phylaxtag.phylaxtag-jiwoo-11041950.testnet` **[live]** |
+| `VITE_CONTRACT_ID` | `demo.phylaxtag-jiwoo-11041950.testnet` **[live]** |
 | `VITE_NETWORK_ID` | `testnet` — required; the app refuses to run without it **[repo]** |
 | `VITE_RPC_URL` | required, e.g. `https://rpc.testnet.fastnear.com`; `VITE_RPC_FALLBACK_URL` defaults to FastNEAR in `web/src/config.ts` **[repo]** |
 | `VITE_WALLETCONNECT_PROJECT_ID` | optional; only enables the EVM group (MetaMask, Coinbase Wallet, WalletConnect QR). Not set in the current production deploy, so the group is hidden **[live]** |
