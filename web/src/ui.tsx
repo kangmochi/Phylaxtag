@@ -290,6 +290,8 @@ export function Shell({
               <ul>
                 <li><AccountId id={config.contractId} /></li>
                 <li><Link to="/how-it-works#supported-wallets">Supported wallets</Link></li>
+                <li><a href="https://x.com/Phylaxtag" target="_blank" rel="noopener noreferrer">X: @Phylaxtag</a></li>
+                <li><a href="https://github.com/kangmochi/Phylaxtag" target="_blank" rel="noopener noreferrer">Source on GitHub</a></li>
               </ul>
             </div>
           </div>

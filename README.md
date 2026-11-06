@@ -11,6 +11,7 @@ To our knowledge, a working NFT-warranty implementation on NEAR. This repository
 | What | Value |
 | --- | --- |
 | Web app | https://phylaxtag.vercel.app/ |
+| X | https://x.com/Phylaxtag |
 | Contract | `phylaxtag.phylaxtag-jiwoo-11041950.testnet` |
 | Explorer | https://testnet.nearblocks.io/accounts/phylaxtag.phylaxtag-jiwoo-11041950.testnet |
 | Demo token | `EB-005` — fund 1.0 NEAR at mint, per-claim cap 0.3 NEAR, cooldown 900 s; one claim of 0.3 NEAR paid, 0.7 NEAR left (checked on chain 5 Nov 2026) |
