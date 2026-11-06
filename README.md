@@ -26,13 +26,16 @@ To our knowledge, a working NFT-warranty implementation on NEAR. This repository
 | Read a warranty, its history, the holder log and the storage figures | Anyone, without a wallet |
 | Connect a wallet | Anyone on NEAR testnet; the app only ever signs for the account you connect |
 | `mint` | Only an account on the issuer allowlist. Any other wallet is refused with "This account is not an allowed issuer." |
-| `pay_service`, `nft_transfer` | Only the current holder of that token |
+| `pay_service`, `nft_transfer` | Only the current holder of that token, or an account the holder approved for the transfer (NEP-178). `pay_service` is refused while any approval is active, so a listed token cannot be drained before the sale |
 | `expire` | Anyone, but only after that token's expiry (the demo token `EB-005` expires on 2030-01-01) |
 
 So a visitor can read everything and connect a wallet, while the state-changing calls stay with
-the roles the contract defines. To exercise the holder flow, reply to [@Phylaxtag](https://x.com/Phylaxtag)
-with a testnet account id and a demo token can be transferred to it, which makes `pay_service`,
-`nft_transfer` and the holder-only page yours to try.
+the roles the contract defines. That is deliberate: the fund and the ownership both live inside
+the token, so a call that anyone could make would let anyone move somebody else's money or item.
+
+To exercise the holder flow, reply to [@Phylaxtag](https://x.com/Phylaxtag) with a testnet account
+id and a demo token can be transferred to it, which makes `pay_service`, `nft_transfer` and the
+holder-only page yours to try.
 
 ### Official contract
 
