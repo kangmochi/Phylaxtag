@@ -67,12 +67,12 @@ Home labels: **All warranties**, **Your side**. Wallets: NEAR wallets come first
 
 ## Try it
 
-- Run `cargo test` in `contract/` - see 61 tests pass.
+- Run `cargo test` in `contract/` - see 62 tests pass.
 - Run `cargo test` in `integration-tests/` - see 8 tests pass. Build the release wasm first (the line below). CI runs this on a GitHub-hosted runner with `--test-threads=1`. The sandbox creates its own accounts. It needs a network the first time, because `near-sandbox` downloads its binary.
 - Run `cargo fmt --check` in `contract/` and in `integration-tests/` - see no diff. CI runs this.
 - Run `cargo clippy --all-targets -- -D warnings` in `contract/` and in `integration-tests/` - see no warnings. CI runs this.
 - Run `cargo build --target wasm32-unknown-unknown --release` in `contract/` - see `contract/target/wasm32-unknown-unknown/release/phylaxtag.wasm`. The wasm file is gitignored.
-- Run `npm test` in `web/` - see 58 tests pass (Vitest).
+- Run `npm test` in `web/` - see 70 tests pass (Vitest).
 - Run `npm run e2e` in `web/` - see 27 tests pass (Playwright).
 - Deploy to testnet - the live demo uses `demo.phylaxtag-jiwoo-11041950.testnet` under parent `phylaxtag-jiwoo-11041950.testnet`; the full procedure is in [docs/TESTNET_DEPLOY_GUIDE.md](docs/TESTNET_DEPLOY_GUIDE.md).
 
@@ -108,7 +108,7 @@ cd contract
 cargo test
 ```
 
-61 tests pass. `cargo test` in `contract/` does not need OpenSSL or pkg-config.
+62 tests pass. `cargo test` in `contract/` does not need OpenSSL or pkg-config.
 
 Spec IDs in this run:
 
@@ -257,7 +257,7 @@ npm run dev
 
 - Run `npm run typecheck` in `web/` - see no type errors.
 - Run `npm run lint` in `web/` - see no lint errors.
-- Run `npm test` in `web/` - see 58 tests pass.
+- Run `npm test` in `web/` - see 70 tests pass.
 - Run `npm run build` and then `npm run check:bundle` in `web/` - see "Production bundle is clean" and no test-wallet marker.
 - Run `npx playwright install chromium` once, then run `npm run e2e` in `web/` - see 27 tests pass (Playwright).
 

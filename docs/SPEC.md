@@ -222,9 +222,9 @@ The `Pending` record status is what the UI shows instead.
 
 | Suite | Count | Command |
 | --- | --- | --- |
-| Contract unit tests | 61 | `cargo test` in `contract/` |
+| Contract unit tests | 62 | `cargo test` in `contract/` |
 | Contract sandbox tests | 8 | `cargo test` in `integration-tests/` (needs the release wasm) |
-| Web unit tests (Vitest) | 58 | `npm test` in `web/` |
+| Web unit tests (Vitest) | 70 | `npm test` in `web/` |
 | Web end-to-end tests (Playwright) | 27 | `npm run e2e` in `web/` |
 
 The contract suites cover 35 contract-level plan IDs (T01–T30, T34–T37, T39). One ID can map
