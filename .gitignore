@@ -29,3 +29,6 @@ web/blob-report/
 # Editor and OS
 .DS_Store
 *.swp
+
+# Local screenshot sweeps (not documentation)
+web-shots/

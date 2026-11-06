@@ -63,7 +63,7 @@ near account create-account sponsor-by-faucet-service $PARENT \
 near tokens $PARENT view-near-balance network-config testnet now
 ```
 
-**Faucet note.** The CLI `sponsor-by-faucet-service` path has credited on the order of 10 NEAR per request in practice; the web faucet at https://docs.near.org/getting-started/faucet and the hackathon faucet table may credit a different amount (2 NEAR, rate limited). Treat the amount as unconfirmed and always read the balance after a request. See `docs/OPEN_QUESTIONS.md`.
+**Faucet note.** The CLI `sponsor-by-faucet-service` path has credited on the order of 10 NEAR per request in practice; the web faucet at https://docs.near.org/getting-started/faucet and the hackathon faucet table may credit a different amount (2 NEAR, rate limited). Treat the amount as unconfirmed and always read the balance after a request.
 
 Extra top-ups: web faucet (account id only) or a testnet wallet, then `near account import-account` — you type the seed yourself; never in chat.
 

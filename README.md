@@ -52,8 +52,8 @@ Home labels: **All warranties**, **Your side**. Wallets: NEAR wallets come first
 - Run `cargo fmt --check` in `contract/` and in `integration-tests/` - see no diff. CI runs this.
 - Run `cargo clippy --all-targets -- -D warnings` in `contract/` and in `integration-tests/` - see no warnings. CI runs this.
 - Run `cargo build --target wasm32-unknown-unknown --release` in `contract/` - see `contract/target/wasm32-unknown-unknown/release/phylaxtag.wasm`. The wasm file is gitignored.
-- Run `npm test` in `web/` - see 56 tests pass (Vitest).
-- Run `npm run e2e` in `web/` - see 26 tests pass (Playwright).
+- Run `npm test` in `web/` - see 58 tests pass (Vitest).
+- Run `npm run e2e` in `web/` - see 27 tests pass (Playwright).
 - Deploy to testnet - the live demo uses `phylaxtag.phylaxtag-jiwoo-11041950.testnet` under parent `phylaxtag-jiwoo-11041950.testnet`; the full procedure is in [docs/TESTNET_DEPLOY_GUIDE.md](docs/TESTNET_DEPLOY_GUIDE.md).
 
 ## Build
@@ -127,7 +127,7 @@ Spec IDs in this run:
 
 Also, not spec IDs: `mint_happy_path`, `add_issuer_rejects_non_admin`, `new_rejects_second_init`, `different_issuer_may_reuse_serial_hash`, `pay_service_requires_one_yocto`, `expire_rejects_missing_token`, `expire_noop_while_refund_in_flight`, `storage_prepay_matches_one_service_record`, `storage_prepay_covers_full_rings`.
 
-`different_issuer_may_reuse_serial_hash` checks the accepted residual risk in spec 6.2 S11: a second issuer may mint the same `serial_hash`.
+`different_issuer_may_reuse_serial_hash` checks the accepted residual risk in [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) S11: a second issuer may mint the same `serial_hash`.
 
 Not in this run:
 
@@ -171,24 +171,22 @@ T06, T10, T19, T21, T22, and T36 check one part of the T26 invariant after every
 - `contract/` - Rust NEAR contract crate `phylaxtag`
 - `integration-tests/` - sandbox tests (`near-workspaces` 0.24.0). Not used by `contract/`.
 - `web/` - Vite + React + TypeScript app. Read-only pages use RPC view calls. Signing uses NEAR Wallet Selector on testnet.
-- `docs/phylaxtag-spec-v3.7.pdf` - spec v3.7, DRAFT - not final, the reference, read-only for code agents
-- `docs/phylaxtag-spec-v3.6.pdf` - spec v3.6, history
-- `docs/phylaxtag-spec-v3.5.pdf` - spec v3.5, history
-- `docs/phylaxtag-spec-v3.4.pdf` - spec v3.4, history
+- `docs/SPEC.md` - contract and web design reference: actors, interface, limits, storage, events, tests
+- `docs/ARCHITECTURE.md` - how the contract, the web app and the tests fit together
+- `docs/THREAT_MODEL.md` - how a seller could try to keep the money or the access, and what stops it
 - `docs/DECISIONS.md` - pinned crate and npm versions, measured gas, and measured storage
 - `docs/TESTNET_DEPLOY_GUIDE.md` - deploy, mint, claim, Vercel setup, and post-submit cleanup
-- `docs/OPEN_QUESTIONS.md` - what is unverified or still a placeholder before submission
 - `.github/workflows/ci.yml` - contract fmt, clippy, and test, the sandbox job, and the web job, on pull requests and on pushes to `main`
 
 ## Status
 
 In this repository now:
 
-- `new`, `add_issuer`, and `mint` (checks and storage accounting from spec 5.1 and 5.4, including the worst-case record prepay)
+- `new`, `add_issuer`, and `mint` (checks and storage accounting from [docs/SPEC.md](docs/SPEC.md) sections 6.1 and 8, including the worst-case record prepay)
 - `pay_service` and `on_payout` (idempotent; a failed payout restores the balance, `total_locked`, and the cooldown)
 - `expire` and `on_expire_payout` (idempotent; `warranty_expired` once, later attempts `expire_refund_retried`; a call while a refund is already in flight returns 0)
 - `nft_transfer` writes the holder log (50-entry ring, drop oldest)
-- Views `get_asset` (display status from spec 5.1b), `get_service_history`, `get_holder_history`, `get_storage_info`, and the NEP-171 / NEP-177 / NEP-181 views
+- Views `get_asset` (display status from [docs/SPEC.md](docs/SPEC.md) section 6.3), `get_service_history`, `get_holder_history`, `get_storage_info`, and the NEP-171 / NEP-177 / NEP-181 views
 - NEP-178 approval methods, delegated to `near-contract-standards`
 - `nft_transfer_call` always panics with `nft_transfer_call disabled in MVP`
 - Sandbox tests for T10, T17, T19, T20, T22, T26, and T37
@@ -198,8 +196,8 @@ The web app has the warranty page, the history page, the issuer page (mint and c
 Not built yet:
 
 - T33 (newcomer run of this README) is still manual.
-- EVM sign-in, EVM meta-transactions and an EVM account passing the issuer allowlist: code ships, none of it verified yet. Open items are tracked in [docs/OPEN_QUESTIONS.md](docs/OPEN_QUESTIONS.md).
-- Above-cap issuer approval: removed in spec v3.7, future work only, not built.
+- EVM sign-in, EVM meta-transactions and an EVM account passing the issuer allowlist: code ships, none of it is verified yet.
+- An above-cap issuer approval step: not built.
 
 Callback gas is 5 TGas, from the sandbox measurement in `docs/DECISIONS.md`.
 
@@ -235,15 +233,15 @@ npm ci
 npm run dev
 ```
 
-`web/.env.example` sets `VITE_CONTRACT_ID=your-contract.testnet`, `VITE_RPC_URL=https://rpc.testnet.near.org`, and `VITE_NETWORK_ID=testnet`. Leave `VITE_TEST_WALLET` unset. Open the printed local URL - see the "Testnet demo" banner. Read-only pages call the RPC without a wallet. Connect uses NEAR Wallet Selector on testnet only. A missing env file shows the banner and the config error. It does not start the test wallet.
+`web/.env.example` sets `VITE_CONTRACT_ID=your-contract.testnet`, `VITE_RPC_URL=https://rpc.testnet.near.org`, and `VITE_NETWORK_ID=testnet`. Leave `VITE_TEST_WALLET` unset. Open the printed local URL - the header carries a `Testnet` badge. Read-only pages call the RPC without a wallet. Connect uses NEAR Wallet Selector on testnet only. A missing env file shows a configuration error screen instead of the app, and it does not start the test wallet.
 
 - Run `npm run typecheck` in `web/` - see no type errors.
 - Run `npm run lint` in `web/` - see no lint errors.
-- Run `npm test` in `web/` - see 7 tests pass.
+- Run `npm test` in `web/` - see 58 tests pass.
 - Run `npm run build` and then `npm run check:bundle` in `web/` - see "Production bundle is clean" and no test-wallet marker.
-- Run `npx playwright install chromium` once, then run `npm run e2e` in `web/` - see 26 tests pass (Playwright).
+- Run `npx playwright install chromium` once, then run `npm run e2e` in `web/` - see 27 tests pass (Playwright).
 
-The browser suite (26 tests) covers `T31 gated page access`, `T32 sell button flow` and `T38 status labels and next claim`, plus the wallet picker at 375 px, the EVM group with a dummy project id, the mobile table header, and the issuer gate. They set `VITE_TEST_WALLET=1`, which is a build flag. That build talks to an in-memory contract and switches account labels. It has no keys. The production build resolves the same import to a disabled module, and `check:bundle` fails if the test marker or a Google Fonts URL is in `web/dist`.
+The browser suite (27 tests) covers `T31 gated page access`, `T32 sell button flow` and `T38 status labels and next claim`, plus the wallet picker at 375 px, the EVM group with a dummy project id, the mobile table header, and the issuer gate. They set `VITE_TEST_WALLET=1`, which is a build flag. That build talks to an in-memory contract and switches account labels. It has no keys. The production build resolves the same import to a disabled module, and `check:bundle` fails if the test marker or a Google Fonts URL is in `web/dist`.
 
 The JSON shapes in `web/src/test-wallet/fixtures/sandbox-views.json` were copied from one local sandbox mint: `get_asset`, `get_service_history`, `get_holder_history`, `get_storage_info`, `nft_token`, and `nft_metadata`. The unit test parses that file as text so the expiry nanoseconds stay exact. The Playwright state is a separate in-memory copy with the same field names and yoctoNEAR strings. A successful sandbox `expire` settles its callback before a test can read `pending_refund`, so the in-flight fixture uses the same yoctoNEAR string encoding as `balance`.
 
