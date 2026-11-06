@@ -158,8 +158,9 @@ export function HowPage({ chain, contractId }: { chain: Chain; contractId: strin
       <section className="how-block" id="parties">
         <h2>The four parties</h2>
         <p className="how-sub">
-          Money only moves along these arrows. Nothing leaves to the owner, and nothing leaves to a
-          workshop that is not on the list.
+          Money moves one way: the issuer funds the warranty, the holder pays an approved workshop,
+          and the remainder returns to the issuer after expiry. It can never reach the holder's own
+          wallet, and it can never reach a workshop that is not on the list.
         </p>
         <div className="flow">
           <div className="party is-lit">
@@ -187,7 +188,7 @@ export function HowPage({ chain, contractId }: { chain: Chain; contractId: strin
 
       <section className="how-block" id="limits">
         <h2>Honest limits</h2>
-        <p className="how-sub">What this prototype does not do, in the order a reviewer would ask.</p>
+        <p className="how-sub">What this prototype does not do. Take these seriously before trusting any number on the site.</p>
         <div className="limits">
           {LIMITS.map((item) => (
             <div className="limit" key={item.title}>
@@ -260,15 +261,15 @@ export function HowPage({ chain, contractId }: { chain: Chain; contractId: strin
 
       <section className="how-block" id="try">
         <h2>Try it</h2>
-        <p className="how-sub">Three clicks. The first one does not need a wallet.</p>
+        <p className="how-sub">Start with a warranty you can read without a wallet. Connect only when you want to pay or mint.</p>
         <div className="try">
           <Link className="try-link" to="/#all-warranties">
             <b>Open a warranty →</b>
             <span>Fund, claim rules and the service book.</span>
           </Link>
           <Link className="try-link" to="/workshop">
-            <b>Pay a workshop →</b>
-            <span>Hold a warranty and pay from its fund.</span>
+            <b>See workshop payments →</b>
+            <span>What an approved workshop received from warranty funds.</span>
           </Link>
           <Link className="try-link" to="/issuer">
             <b>Mint one →</b>
