@@ -278,14 +278,39 @@ body {
 #root .foot a { color: var(--muted); font-size: 0.9375rem; }
 #root .foot a:hover { color: var(--text); }
 
-.foot .disclaimer {
-  max-width: 46rem;
+.foot-bottom {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  max-width: var(--page);
   margin: 0 auto;
   padding: 0 var(--gutter) 40px;
+}
+
+.foot .disclaimer {
+  max-width: 46rem;
+  margin: 0;
+  padding: 0;
   color: var(--muted-2);
   font-size: 0.8125rem;
   line-height: 1.55;
 }
+
+.foot-social { display: flex; flex: 0 0 auto; gap: 0.5rem; }
+
+.foot-social a {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--muted);
+}
+
+#root .foot-social a:hover { color: var(--text); border-color: var(--line-strong); background: var(--surface); }
+.foot-social svg { width: 18px; height: 18px; display: block; }
 
 /* ---------- cards & forms ---------- */
 
@@ -683,7 +708,7 @@ body {
   .tile { min-height: 0; }
   #root main { padding: 0 20px 56px; }
   .foot-inner { grid-template-columns: minmax(0, 1fr); gap: 2rem; padding: 40px 20px 28px; }
-  .foot .disclaimer { padding: 0 20px 32px; }
+  .foot-bottom { flex-direction: column; align-items: flex-start; padding: 0 20px 32px; }
   .page-head { margin: 2rem 0 1.25rem; }
 }
 
