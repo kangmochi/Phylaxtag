@@ -80,7 +80,9 @@ that is a mint parameter, not a contract flag.
 
 Rust, `near-sdk` and `near-contract-standards` pinned in [DECISIONS.md](DECISIONS.md).
 All amounts are yoctoNEAR (1 NEAR = 10^24 yocto); all times are block timestamps in
-nanoseconds.
+nanoseconds. `u64` arguments (`expiry`, `cooldown_ns`) and yoctoNEAR amounts are sent as JSON
+strings, which is what the web app does; the contract types them as `U64` and `NearToken` so the
+encoding is explicit and cannot silently lose precision.
 
 ### 6.1 Change methods
 

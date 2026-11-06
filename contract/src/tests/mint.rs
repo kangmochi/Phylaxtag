@@ -3,6 +3,7 @@
 //! T28 and T29 are split into one `#[should_panic]` test per failure.
 
 use near_sdk::NearToken;
+use near_sdk::json_types::U64;
 use near_sdk::test_utils::{accounts, get_logs};
 use near_sdk::{env, testing_env};
 
@@ -203,9 +204,9 @@ fn mint_happy_path() {
         TOKEN.to_string(),
         SERIAL.to_string(),
         fund,
-        expiry,
+        U64(expiry),
         cap,
-        cooldown,
+        U64(cooldown),
         vec![workshop()],
         sample_metadata(),
     );

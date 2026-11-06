@@ -2,6 +2,7 @@
 
 use near_contract_standards::non_fungible_token::Token;
 use near_contract_standards::non_fungible_token::metadata::TokenMetadata;
+use near_sdk::json_types::U64;
 use near_sdk::mock::MockAction;
 use near_sdk::test_utils::{VMContextBuilder, accounts, get_created_receipts, get_logs};
 use near_sdk::{AccountId, Gas, NearToken, PromiseResult, env, testing_env};
@@ -154,9 +155,9 @@ pub(super) fn mint_with(
         args.token_id,
         args.serial_hash,
         args.fund_amount,
-        args.expiry,
+        U64(args.expiry),
         args.claim_cap,
-        args.cooldown_ns,
+        U64(args.cooldown_ns),
         args.workshops,
         sample_metadata(),
     )

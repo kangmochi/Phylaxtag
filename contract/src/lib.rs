@@ -46,7 +46,7 @@ use near_contract_standards::non_fungible_token::metadata::{
 };
 use near_sdk::borsh::BorshSerialize;
 use near_sdk::collections::{LookupMap, LookupSet, Vector};
-use near_sdk::json_types::U128;
+use near_sdk::json_types::{U64, U128};
 use near_sdk::{
     AccountId, BorshStorageKey, NearToken, PanicOnDefault, Promise, PromiseOrValue, env, near,
     require,
@@ -142,9 +142,9 @@ impl Contract {
         token_id: TokenId,
         serial_hash: String,
         fund_amount: NearToken,
-        expiry: u64,
+        expiry: U64,
         claim_cap: NearToken,
-        cooldown_ns: u64,
+        cooldown_ns: U64,
         workshops: Vec<AccountId>,
         metadata: TokenMetadata,
     ) -> Token {
@@ -152,9 +152,9 @@ impl Contract {
             token_id,
             serial_hash,
             fund_amount,
-            expiry,
+            expiry.0,
             claim_cap,
-            cooldown_ns,
+            cooldown_ns.0,
             workshops,
             metadata,
         )

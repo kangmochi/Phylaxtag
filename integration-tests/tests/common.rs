@@ -115,9 +115,11 @@ pub async fn mint(
             "token_id": token_id,
             "serial_hash": serial(token_id),
             "fund_amount": fund,
-            "expiry": expiry_ns,
+            "expiry": expiry_ns.to_string(),
             "claim_cap": cap,
-            "cooldown_ns": cooldown_ns,
+            // The web app sends u64 arguments as JSON strings; the sandbox does the same so
+            // this suite fails if the contract stops accepting them.
+            "cooldown_ns": cooldown_ns.to_string(),
             "workshops": workshops,
             "metadata": {
                 "title": "E-bike EB-001",
