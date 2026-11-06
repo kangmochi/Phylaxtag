@@ -7,6 +7,7 @@ import { estimateMintDeposit } from "../near/deposit";
 import { explainError } from "../near/errors";
 import { CALL_GAS, MINT_GAS } from "../near/gas";
 import { randomSaltHex, serialHash } from "../near/hash";
+import { mintProblems } from "../near/mint-validation";
 import { nsFromNow } from "../near/time";
 import type { AssetView } from "../near/types";
 import { normalizeAssetView } from "../near/views";
@@ -27,10 +28,12 @@ const DEMO = {
 export function IssuerPage({
   chain,
   accountId,
+  contractId,
   explorer,
 }: {
   chain: Chain;
   accountId: string | null;
+  contractId: string;
   explorer: (hash: string) => string;
 }) {
   const openWalletPicker = useWalletPicker();
@@ -68,12 +71,31 @@ export function IssuerPage({
     }
   }, [accountId, tokenId, fund, title, description, extra, workshopsText]);
 
+  const problems = useMemo(
+    () =>
+      mintProblems({
+        tokenId,
+        serial,
+        fundNear: fund,
+        capNear: cap,
+        cooldownSeconds,
+        expiryMinutes,
+        workshops,
+        issuerAccountId: accountId ?? "",
+        contractId,
+      }),
+    [tokenId, serial, fund, cap, cooldownSeconds, expiryMinutes, workshopsText, accountId, contractId],
+  );
+
   async function refreshHash() {
     setHashPreview(await serialHash(salt, serial));
   }
 
   async function mint(event: FormEvent) {
     event.preventDefault();
+    if (problems.length > 0) {
+      return;
+    }
     if (!estimate) {
       setTx({ kind: "failure", plain: "Enter a NEAR amount such as 10 or 2.5", original: "Enter a NEAR amount such as 10 or 2.5", fromContract: false });
       return;
@@ -237,7 +259,14 @@ export function IssuerPage({
           ) : <p>Enter a fund amount to see the deposit.</p>}
           <p>Unused storage deposit is refunded by the contract. The worst-case record prepay is not refunded.</p>
         </div>
-        <button type="submit">Mint warranty</button>
+        {problems.length > 0 ? (
+          <div className="alert" role="alert" data-testid="mint-problems">
+            {problems.map((problem) => (
+              <p key={`${problem.field}:${problem.message}`}>{problem.message}</p>
+            ))}
+          </div>
+        ) : null}
+        <button type="submit" disabled={problems.length > 0}>Mint warranty</button>
       </form>
 
       <h2>Close warranty / refund</h2>
