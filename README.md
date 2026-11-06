@@ -271,9 +271,21 @@ The contract has no quote view. For a 7-character issuer and the measured demo m
 
 Gas attached by the app, from `web/src/near/gas.ts`: 15 TGas for `mint` (measured burn 3_633_924_445_063 gas) and 30 TGas for `pay_service`, `expire`, and `nft_transfer`. Unused gas is refunded. Details are in `docs/DECISIONS.md`.
 
+## Campaign videos
+
+Two short films summarise the project. Both are rendered at 1280x720 with an English voiceover and a
+CC0 music bed; the sources and licences are listed in [docs/CREDITS.md](docs/CREDITS.md).
+
+| Film | Length | File | What it covers |
+| --- | --- | --- | --- |
+| Hero | 45 s | [phylaxtag-hero-45s.mp4](docs/videos/phylaxtag-hero-45s.mp4) | Why a warranty dies at resale, and how the fund travels with the token |
+| Explainer | 124 s | [phylaxtag-explainer-124s.mp4](docs/videos/phylaxtag-explainer-124s.mp4) | Mint, transfer, claim caps, approvals, expiry, public reads, and the limits of the prototype |
+
+Poster frames: [hero](docs/videos/hero-poster.png) · [explainer](docs/videos/explainer-poster.png).
+
 ## Demo script
 
-About 90 seconds, for the video. The public run uses the deployed contract and the demo token `EB-005`; with `VITE_TEST_WALLET=1` the same screens run locally against the in-memory contract, using the "Demo preset" on the issuer page and the account buttons `issuer.test`, `alice.test`, and `budi.test`.
+For a live walkthrough (about 90 seconds). The public run uses the deployed contract and the demo token `EB-005`; with `VITE_TEST_WALLET=1` the same screens run locally against the in-memory contract, using the "Demo preset" on the issuer page and the account buttons `issuer.test`, `alice.test`, and `budi.test`.
 
 1. The issuer opens the issuer page, mints EB-001, and the deposit preview is visible before the wallet opens. It shows the fund and the storage deposit, and it says unused storage deposit is refunded by the contract.
 2. The owner opens the holder page for EB-001, requests a service payment inside the cap, and the workshop is paid. The service record reads Paid.
@@ -289,6 +301,7 @@ About 90 seconds, for the video. The public run uses the deployed contract and t
 - Smart contract, unit tests and sandbox tests: Cursor's coding agent (model as reported by the Cursor team; an earlier revision of this README said "Cursor Grok 4.7").
 - Web app in `web/`: Jiwoo, a Hermes agent running `deepseek-v4.1-flash` through OpenRouter.
 - Spec, schedule and submission materials: Pharita, a Grok agent on xAI; the spec owner names the exact model version.
+- Campaign videos in `docs/videos/`: script, storyboard and edit by Jiwoo; the voiceover is synthetic, generated with an open-source text-to-speech model on the owner's own hardware from a reference clip the owner supplied; the films were rendered from HTML compositions by the same agent. The music is a CC0 track, credited in [docs/CREDITS.md](docs/CREDITS.md).
 
 Both code-generation services are named above; no further code-generation service was used. Every change went through a pull request and a review; no agent holds a key or a seed phrase. An earlier revision of this README said that all code, including the web app, came from Cursor AI agents and that no other code-generation service was used; the lines above replace that sentence.
 
