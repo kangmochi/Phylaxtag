@@ -24,7 +24,7 @@ To our knowledge, a working NFT-warranty implementation on NEAR. This repository
 
 Only `phylaxtag.phylaxtag-jiwoo-11041950.testnet` is this project. The contract code is public by nature: a NEAR contract ships as a WASM blob that anyone can download from the chain, so hiding the source would not prevent a copy. What a copy cannot do is take over these warranties, because a token is identified by its contract account plus `token_id`, and a redeployed copy lives under a different account id.
 
-To check what is actually deployed, read the code over RPC and hash the returned bytes. At the time of writing (5 Nov 2026) this prints `73a8da212590b382d74eb6a1a374af4c8a86330ee7bf51bd90d67b74c65e8c96` for 366,256 bytes:
+To check what is actually deployed, read the code over RPC and hash the returned bytes. At the time of writing (6 Nov 2026) this prints `df5e5e69b98a74b292aba07bb68c2ccb816b79f2b312fb36b89a4a8d02f34f79` for 367,032 bytes:
 
 ```bash
 curl -s https://rpc.testnet.fastnear.com -H 'content-type: application/json' \

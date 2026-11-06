@@ -25,9 +25,9 @@ const FUNCTIONS = [
   "nft_tokens_for_owner",
 ];
 
-/** sha256 of the deployed wasm, read with the RPC view_code method on 5 Nov 2026. */
-const CODE_HASH = "73a8da212590b382d74eb6a1a374af4c8a86330ee7bf51bd90d67b74c65e8c96";
-const CODE_BYTES = "366,256";
+/** sha256 of the deployed wasm, read with the RPC view_code method on 6 Nov 2026. */
+const CODE_HASH = "df5e5e69b98a74b292aba07bb68c2ccb816b79f2b312fb36b89a4a8d02f34f79";
+const CODE_BYTES = "367,032";
 
 const LIMITS: ReadonlyArray<{ title: string; body: string }> = [
   { title: "Not a product", body: "It runs on NEAR testnet only. No real money, no support, no service level." },

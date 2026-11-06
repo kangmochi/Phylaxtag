@@ -181,3 +181,16 @@ repository was archived as private. The history was moved across with its origin
 dates, so the earliest commits are dated 4 November 2026, one day before this repository
 existed. A commit date here records when the change was written, not when it was pushed. Every
 commit falls inside the hackathon window (1-14 November 2026).
+
+## Mint argument encoding (6 November 2026)
+
+`expiry` and `cooldown_ns` are typed `U64`, so the JSON form the web app sends - nanoseconds as
+a string - deserialises instead of aborting. Before this change the deployed code read them as
+plain `u64`, which accepts a JSON number only, so every mint from the web app ended in
+`WebAssembly trap: An unreachable opcode`. YoctoNEAR amounts stay `NearToken` strings, so every
+large integer crosses the boundary as a string and nothing is rounded through a JavaScript
+number.
+
+The redeploy on 6 November 2026 is 367,032 bytes, sha256
+`df5e5e69b98a74b292aba07bb68c2ccb816b79f2b312fb36b89a4a8d02f34f79`, and it replaced the
+366,256-byte build. Contract state did not change, so no migration was needed.
