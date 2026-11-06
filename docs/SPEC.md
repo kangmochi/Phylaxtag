@@ -130,7 +130,11 @@ clock. The UI shows it as returned and never recomputes it:
 
 ### 6.4 Error strings
 
-The contract panics with these strings. The web app shows the original string next to its
+The contract panics with these strings, and because the release profile uses
+`panic = "abort"` the text does not reach the client on its own. Every rejection is
+therefore logged first as `Phylaxtag error: <reason>`; the web app reads that line from the
+transaction outcome and shows the reason, falling back to the trap text only when the log is
+missing. The web app shows the original string next to its
 plain-English mapping and never guesses.
 
 - `mint`: `Not an approved issuer`, `Bad token_id`, `Bad serial_hash`, `Token exists`,

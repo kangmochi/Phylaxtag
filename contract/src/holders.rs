@@ -4,6 +4,7 @@
 //! entries are stored, the oldest slot is overwritten. `holder_total` keeps
 //! counting. A problem in the log must not panic: that would revert the transfer.
 
+use crate::errors::refuse;
 use near_contract_standards::non_fungible_token::TokenId;
 use near_sdk::collections::Vector;
 use near_sdk::{AccountId, env};
@@ -62,7 +63,7 @@ pub(crate) fn ordered_holders(
         .map(|offset| {
             holders
                 .get((start + offset) % len)
-                .unwrap_or_else(|| env::panic_str("holder index"))
+                .unwrap_or_else(|| refuse("holder index"))
         })
         .collect()
 }

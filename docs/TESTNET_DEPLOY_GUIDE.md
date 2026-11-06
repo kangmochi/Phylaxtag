@@ -51,7 +51,7 @@ cargo build --target wasm32-unknown-unknown --release
 ls -l target/wasm32-unknown-unknown/release/phylaxtag.wasm
 ```
 
-Size: **367,032 bytes** with the release profile in `Cargo.toml` (measured on the 6 Nov 2026 rebuild that is deployed, sha256 `df5e5e69b98a74b292aba07bb68c2ccb816b79f2b312fb36b89a4a8d02f34f79`; the first deployment was 366,256 bytes, so expect the figure to move a little between rebuilds). That is about 3.67 NEAR locked for code storage. The older unoptimised build was 592,362 bytes.
+Size: **367,712 bytes** with the release profile in `Cargo.toml` (measured on the 6 Nov 2026 rebuild that is deployed, sha256 `63cfae3d60e84168fc03dc1eb426dbef7b76f76a2ca536f2539278ee6768cebe`; the earlier builds were 366,256 and 367,032 bytes, so expect the figure to move a little between rebuilds). That is about 3.68 NEAR locked for code storage. The older unoptimised build was 592,362 bytes.
 
 ## 3. Parent account and faucet
 

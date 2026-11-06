@@ -1,10 +1,11 @@
 //! `mint` from spec 5.1 and the storage accounting from spec 5.4.
 
+use crate::errors::{refuse, refuse_unless};
 use near_contract_standards::non_fungible_token::Token;
 use near_contract_standards::non_fungible_token::events::NftMint;
 use near_contract_standards::non_fungible_token::metadata::TokenMetadata;
 use near_sdk::collections::Vector;
-use near_sdk::{AccountId, NearToken, Promise, env, require};
+use near_sdk::{AccountId, NearToken, Promise, env};
 
 use crate::events;
 use crate::storage::prepaid_extra_bytes;
@@ -31,28 +32,28 @@ impl Contract {
         metadata: TokenMetadata,
     ) -> Token {
         let issuer = env::predecessor_account_id();
-        require!(self.issuers.contains(&issuer), "Not an approved issuer");
+        refuse_unless!(self.issuers.contains(&issuer), "Not an approved issuer");
         // Spec 5.1 writes "1..32 bytes". That is 1 to 32 inclusive, same style as "1..N".
-        require!((1..=32).contains(&token_id.len()), "Bad token_id");
-        require!(is_lowercase_hex_64(&serial_hash), "Bad serial_hash");
-        require!(
+        refuse_unless!((1..=32).contains(&token_id.len()), "Bad token_id");
+        refuse_unless!(is_lowercase_hex_64(&serial_hash), "Bad serial_hash");
+        refuse_unless!(
             self.tokens.owner_by_id.get(&token_id).is_none(),
             "Token exists"
         );
-        require!(
+        refuse_unless!(
             !self
                 .used_serials
                 .contains(&(issuer.clone(), serial_hash.clone())),
             "Serial already used"
         );
-        require!(expiry > env::block_timestamp(), "Bad expiry");
-        require!(
+        refuse_unless!(expiry > env::block_timestamp(), "Bad expiry");
+        refuse_unless!(
             claim_cap.as_yoctonear() > 0 && claim_cap <= fund_amount,
             "Bad cap"
         );
-        require!(cooldown_ns > 0, "Cooldown must be > 0");
+        refuse_unless!(cooldown_ns > 0, "Cooldown must be > 0");
         if !workshops_ok(&workshops, &issuer) {
-            env::panic_str("Bad workshop list");
+            refuse("Bad workshop list");
         }
 
         let storage_before = env::storage_usage();
@@ -106,7 +107,7 @@ impl Contract {
         let billable = storage_used.saturating_add(prepaid);
         let storage_cost = env::storage_byte_cost().saturating_mul(u128::from(billable));
         let required = fund_amount.saturating_add(storage_cost);
-        require!(env::attached_deposit() >= required, "Deposit too small");
+        refuse_unless!(env::attached_deposit() >= required, "Deposit too small");
 
         let refund = env::attached_deposit().saturating_sub(required);
         if refund.as_yoctonear() > 0 {
@@ -116,7 +117,7 @@ impl Contract {
         self.total_locked = self
             .total_locked
             .checked_add(fund_amount)
-            .unwrap_or_else(|| env::panic_str("Fund overflow"));
+            .unwrap_or_else(|| refuse("Fund overflow"));
 
         NftMint {
             owner_id: issuer.as_ref(),

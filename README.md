@@ -25,7 +25,7 @@ Only `demo.phylaxtag-jiwoo-11041950.testnet` is this project. An earlier testnet
 `phylaxtag.phylaxtag-jiwoo-11041950.testnet`, is kept as an archive: it holds the first round of
 demo tokens and is no longer used by the app. The contract code is public by nature: a NEAR contract ships as a WASM blob that anyone can download from the chain, so hiding the source would not prevent a copy. What a copy cannot do is take over these warranties, because a token is identified by its contract account plus `token_id`, and a redeployed copy lives under a different account id.
 
-To check what is actually deployed, read the code over RPC and hash the returned bytes. At the time of writing (6 Nov 2026) this prints `df5e5e69b98a74b292aba07bb68c2ccb816b79f2b312fb36b89a4a8d02f34f79` for 367,032 bytes:
+To check what is actually deployed, read the code over RPC and hash the returned bytes. At the time of writing (6 Nov 2026) this prints `63cfae3d60e84168fc03dc1eb426dbef7b76f76a2ca536f2539278ee6768cebe` for 367,712 bytes:
 
 ```bash
 curl -s https://rpc.testnet.fastnear.com -H 'content-type: application/json' \

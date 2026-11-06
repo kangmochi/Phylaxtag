@@ -26,8 +26,8 @@ const FUNCTIONS = [
 ];
 
 /** sha256 of the deployed wasm, read with the RPC view_code method on 6 Nov 2026. */
-const CODE_HASH = "df5e5e69b98a74b292aba07bb68c2ccb816b79f2b312fb36b89a4a8d02f34f79";
-const CODE_BYTES = "367,032";
+const CODE_HASH = "63cfae3d60e84168fc03dc1eb426dbef7b76f76a2ca536f2539278ee6768cebe";
+const CODE_BYTES = "367,712";
 
 const LIMITS: ReadonlyArray<{ title: string; body: string }> = [
   { title: "Not a product", body: "It runs on NEAR testnet only. No real money, no support, no service level." },

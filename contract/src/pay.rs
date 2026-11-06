@@ -1,7 +1,8 @@
 //! `pay_service` and `on_payout` from spec 5.1, 5.1a, and 5.2.
 
+use crate::errors::{refuse, refuse_unless};
 use near_contract_standards::non_fungible_token::TokenId;
-use near_sdk::{AccountId, NearToken, Promise, assert_one_yocto, env, is_promise_success, require};
+use near_sdk::{AccountId, NearToken, Promise, assert_one_yocto, env, is_promise_success};
 
 use crate::events;
 use crate::types::{ServiceRecord, ServiceStatus, WarrantyStatus, is_lowercase_hex_64};
@@ -22,30 +23,30 @@ impl Contract {
             .tokens
             .owner_by_id
             .get(&token_id)
-            .unwrap_or_else(|| env::panic_str("Token not found"));
+            .unwrap_or_else(|| refuse("Token not found"));
         assert_one_yocto();
-        require!(env::predecessor_account_id() == owner, "Not owner");
+        refuse_unless!(env::predecessor_account_id() == owner, "Not owner");
 
         let mut asset = self
             .assets
             .get(&token_id)
-            .unwrap_or_else(|| env::panic_str("Token not found"));
+            .unwrap_or_else(|| refuse("Token not found"));
         let now = env::block_timestamp();
-        require!(
+        refuse_unless!(
             asset.status != WarrantyStatus::Expired && now < asset.expiry_ns,
             "Expired"
         );
-        require!(!self.token_is_listed(&token_id), "Token is listed");
-        require!(
+        refuse_unless!(!self.token_is_listed(&token_id), "Token is listed");
+        refuse_unless!(
             asset.workshops.iter().any(|allowed| allowed == &workshop),
             "Workshop not approved"
         );
-        require!(workshop != owner, "Cannot pay yourself");
-        require!(amount.as_yoctonear() > 0, "Amount must be > 0");
-        require!(amount <= asset.claim_cap, "Over cap");
-        require!(amount <= asset.balance, "Insufficient balance");
+        refuse_unless!(workshop != owner, "Cannot pay yourself");
+        refuse_unless!(amount.as_yoctonear() > 0, "Amount must be > 0");
+        refuse_unless!(amount <= asset.claim_cap, "Over cap");
+        refuse_unless!(amount <= asset.balance, "Insufficient balance");
         if let Some(last) = asset.last_claim_at_ns {
-            require!(
+            refuse_unless!(
                 now >= last.saturating_add(asset.cooldown_ns),
                 "Cooldown active"
             );
@@ -54,10 +55,10 @@ impl Contract {
         let mut history = self
             .history
             .get(&token_id)
-            .unwrap_or_else(|| env::panic_str("Token not found"));
-        require!(history.len() < HISTORY_LIMIT, "History full");
-        require!(work_type.len() <= 32, "Bad work_type");
-        require!(is_lowercase_hex_64(&note_hash), "Bad note_hash");
+            .unwrap_or_else(|| refuse("Token not found"));
+        refuse_unless!(history.len() < HISTORY_LIMIT, "History full");
+        refuse_unless!(work_type.len() <= 32, "Bad work_type");
+        refuse_unless!(is_lowercase_hex_64(&note_hash), "Bad note_hash");
 
         // Saved before the clock moves, so a failed callback can put it back
         // only when no newer claim has replaced it.
@@ -65,7 +66,7 @@ impl Contract {
         asset.balance = asset
             .balance
             .checked_sub(amount)
-            .unwrap_or_else(|| env::panic_str("Insufficient balance"));
+            .unwrap_or_else(|| refuse("Insufficient balance"));
         asset.last_claim_at_ns = Some(now);
         self.sub_locked(amount);
 
@@ -115,10 +116,10 @@ impl Contract {
         let mut history = self
             .history
             .get(&token_id)
-            .unwrap_or_else(|| env::panic_str("Token not found"));
+            .unwrap_or_else(|| refuse("Token not found"));
         let mut record = history
             .get(record_index)
-            .unwrap_or_else(|| env::panic_str("Token not found"));
+            .unwrap_or_else(|| refuse("Token not found"));
         // A second callback is a no-op. Checked before the promise result so
         // it does not touch balances and does not need a fresh result.
         if record.status != ServiceStatus::Pending {
@@ -141,11 +142,11 @@ impl Contract {
         let mut asset = self
             .assets
             .get(&token_id)
-            .unwrap_or_else(|| env::panic_str("Token not found"));
+            .unwrap_or_else(|| refuse("Token not found"));
         asset.balance = asset
             .balance
             .checked_add(amount)
-            .unwrap_or_else(|| env::panic_str("Fund overflow"));
+            .unwrap_or_else(|| refuse("Fund overflow"));
         // A newer claim has its own timestamp. Restoring this one would wipe it.
         if asset.last_claim_at_ns == Some(record.timestamp_ns) {
             asset.last_claim_at_ns = record.prev_last_claim_at_ns;

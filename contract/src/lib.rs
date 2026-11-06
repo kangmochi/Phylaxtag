@@ -3,6 +3,7 @@
 //! One NEP-171 token per physical item. The warranty fund is stored on the token
 //! and moves with the NFT when it is sold. The owner cannot withdraw it.
 
+mod errors;
 mod events;
 mod expire;
 mod holders;
@@ -49,10 +50,10 @@ use near_sdk::collections::{LookupMap, LookupSet, Vector};
 use near_sdk::json_types::{U64, U128};
 use near_sdk::{
     AccountId, BorshStorageKey, NearToken, PanicOnDefault, Promise, PromiseOrValue, env, near,
-    require,
 };
 use std::collections::HashMap;
 
+use crate::errors::{refuse, refuse_unless};
 use types::{display_status, next_claim_ns};
 
 #[derive(BorshStorageKey, BorshSerialize)]
@@ -97,7 +98,7 @@ impl Contract {
     #[init(ignore_state)]
     pub fn new(admin: AccountId, issuers: Vec<AccountId>) -> Self {
         if env::state_exists() {
-            env::panic_str("Already initialized");
+            refuse("Already initialized");
         }
         let mut issuer_set = LookupSet::new(StorageKey::Issuers);
         for account in issuers {
@@ -125,7 +126,7 @@ impl Contract {
 
     /// Spec 5.1. Tests that build the allowlist use this. Panics with "Only admin".
     pub fn add_issuer(&mut self, account: AccountId) {
-        require!(env::predecessor_account_id() == self.admin, "Only admin");
+        refuse_unless!(env::predecessor_account_id() == self.admin, "Only admin");
         self.issuers.insert(&account);
     }
 
@@ -258,7 +259,7 @@ impl Contract {
                 .map(|index| {
                     history
                         .get(index)
-                        .unwrap_or_else(|| env::panic_str("history index"))
+                        .unwrap_or_else(|| refuse("history index"))
                 })
                 .collect(),
         )
@@ -325,7 +326,7 @@ impl NonFungibleTokenCore for Contract {
         msg: String,
     ) -> PromiseOrValue<bool> {
         let _ = (receiver_id, token_id, approval_id, memo, msg);
-        env::panic_str("nft_transfer_call disabled in MVP");
+        refuse("nft_transfer_call disabled in MVP");
     }
 
     /// Spec 5.6 (NEP-171); tests T01, T02.
@@ -450,14 +451,14 @@ impl Contract {
         self.total_locked = self
             .total_locked
             .checked_add(amount)
-            .unwrap_or_else(|| env::panic_str("Fund overflow"));
+            .unwrap_or_else(|| refuse("Fund overflow"));
     }
 
     pub(crate) fn sub_locked(&mut self, amount: NearToken) {
         self.total_locked = self
             .total_locked
             .checked_sub(amount)
-            .unwrap_or_else(|| env::panic_str("Fund underflow"));
+            .unwrap_or_else(|| refuse("Fund underflow"));
     }
 
     /// Any stored approval means the token is listed. An empty map is not stored.

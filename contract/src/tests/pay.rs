@@ -501,3 +501,28 @@ fn pay_service_requires_one_yocto() {
         "brakes".to_string(),
     );
 }
+
+/// The release profile sets `panic = "abort"`, so the panic text never reaches a
+/// client. The reason has to be in the logs instead; this is the line the web app
+/// and a block-explorer reader look for.
+#[test]
+fn t04_rejection_reason_is_logged() {
+    let (mut contract, mut context) = setup();
+    mint_default(&mut contract, &mut context);
+    let rejected = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        pay(
+            &mut contract,
+            &mut context,
+            issuer(),
+            workshop(),
+            NearToken::from_near(4),
+            NOW_NS,
+        );
+    }));
+    assert!(rejected.is_err(), "an over-cap payment must be rejected");
+    let logs = near_sdk::test_utils::get_logs();
+    assert!(
+        logs.iter().any(|line| line == "Phylaxtag error: Over cap"),
+        "expected the rejection reason in the logs, got {logs:?}"
+    );
+}

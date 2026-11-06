@@ -194,3 +194,16 @@ number.
 The redeploy on 6 November 2026 is 367,032 bytes, sha256
 `df5e5e69b98a74b292aba07bb68c2ccb816b79f2b312fb36b89a4a8d02f34f79`, and it replaced the
 366,256-byte build. Contract state did not change, so no migration was needed.
+
+## Visible rejection reasons (6 November 2026)
+
+The release profile keeps `panic = "abort"` for size, and that drops the panic text: a client
+receives `WebAssembly trap: An unreachable opcode was executed` and the receipt logs are empty.
+Each rejection now logs `Phylaxtag error: <reason>` before it aborts, so the reason survives in
+the receipt logs. `web/src/near/rejection.ts` reads that line out of the transaction outcome and
+the UI shows it instead of the trap. The contract unit test `t04_rejection_reason_is_logged`
+checks the log line, and a live call against the deployed contract was used to confirm that the
+line survives the abort.
+
+The redeploy that carries this change is 367,712 bytes, sha256
+`63cfae3d60e84168fc03dc1eb426dbef7b76f76a2ca536f2539278ee6768cebe`. Contract state is unchanged.

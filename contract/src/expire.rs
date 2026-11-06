@@ -1,8 +1,9 @@
 //! `expire` and `on_expire_payout` from spec 5.1 and 5.1a.
 
+use crate::errors::{refuse, refuse_unless};
 use near_contract_standards::non_fungible_token::TokenId;
 use near_sdk::json_types::U128;
-use near_sdk::{NearToken, Promise, env, is_promise_success, require};
+use near_sdk::{NearToken, Promise, env, is_promise_success};
 
 use crate::events;
 use crate::types::WarrantyStatus;
@@ -13,8 +14,8 @@ impl Contract {
         let mut asset = self
             .assets
             .get(&token_id)
-            .unwrap_or_else(|| env::panic_str("Token not found"));
-        require!(env::block_timestamp() >= asset.expiry_ns, "Not yet expired");
+            .unwrap_or_else(|| refuse("Token not found"));
+        refuse_unless!(env::block_timestamp() >= asset.expiry_ns, "Not yet expired");
 
         // A refund is already in flight. Leave that attempt alone: no write,
         // no event, and no second transfer. The outstanding callback still
@@ -67,7 +68,7 @@ impl Contract {
         let mut asset = self
             .assets
             .get(&token_id)
-            .unwrap_or_else(|| env::panic_str("Token not found"));
+            .unwrap_or_else(|| refuse("Token not found"));
         // Only the outstanding attempt is settled. A second call is a no-op
         // and does not read the promise result.
         if asset.pending_refund != Some(amount) {
@@ -83,7 +84,7 @@ impl Contract {
         asset.balance = asset
             .balance
             .checked_add(amount)
-            .unwrap_or_else(|| env::panic_str("Fund overflow"));
+            .unwrap_or_else(|| refuse("Fund overflow"));
         let issuer = asset.issuer.clone();
         self.assets.insert(&token_id, &asset);
         self.add_locked(amount);

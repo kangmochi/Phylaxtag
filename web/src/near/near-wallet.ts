@@ -1,4 +1,5 @@
 import { actionCreators } from "@near-js/transactions";
+import { loggedRejection } from "./rejection";
 import {
   setupWalletSelector,
   type WalletModuleFactory,
@@ -13,6 +14,8 @@ import { rpcView } from "./rpc";
 interface OutcomeLike {
   status?: { Failure?: { error_message?: string } } | string;
   transaction_outcome?: { id?: string };
+  /** Present on a final outcome; carries the logs the contract wrote before it aborted. */
+  receipts_outcome?: Array<{ outcome?: { logs?: string[] } | null }>;
 }
 
 /** Wallet id used by connect() when the picker has not chosen one yet. */
@@ -77,11 +80,12 @@ async function loadModules(): Promise<LoadedModules> {
 
 function failureMessage(outcome: OutcomeLike): string | null {
   const status = outcome.status;
-  if (status && typeof status === "object" && status.Failure) {
-    return status.Failure.error_message || "Transaction failed";
-  }
   if (status === "Failure") {
-    return "Transaction failed";
+    return loggedRejection(outcome) ?? "Transaction failed";
+  }
+  if (status && typeof status === "object" && status.Failure) {
+    // The contract logs the reason before it aborts, so prefer that over the VM trap.
+    return loggedRejection(outcome) ?? status.Failure.error_message ?? "Transaction failed";
   }
   return null;
 }
