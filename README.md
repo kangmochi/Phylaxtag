@@ -19,6 +19,21 @@ To our knowledge, a working NFT-warranty implementation on NEAR. This repository
 
 | Deployment | Vercel builds `web/` on every push to `main`; the build needs `VITE_CONTRACT_ID`, `VITE_RPC_URL`, `VITE_NETWORK_ID`, and `VITE_WALLETCONNECT_PROJECT_ID` for the EVM group |
 
+### What a visitor can try
+
+| Action | Who can do it today |
+| --- | --- |
+| Read a warranty, its history, the holder log and the storage figures | Anyone, without a wallet |
+| Connect a wallet | Anyone on NEAR testnet; the app only ever signs for the account you connect |
+| `mint` | Only an account on the issuer allowlist. Any other wallet is refused with "This account is not an allowed issuer." |
+| `pay_service`, `nft_transfer` | Only the current holder of that token |
+| `expire` | Anyone, but only after that token's expiry (the demo token `EB-005` expires on 2030-01-01) |
+
+So a visitor can read everything and connect a wallet, while the state-changing calls stay with
+the roles the contract defines. To exercise the holder flow, reply to [@Phylaxtag](https://x.com/Phylaxtag)
+with a testnet account id and a demo token can be transferred to it, which makes `pay_service`,
+`nft_transfer` and the holder-only page yours to try.
+
 ### Official contract
 
 Only `demo.phylaxtag-jiwoo-11041950.testnet` is this project. An earlier testnet contract,
