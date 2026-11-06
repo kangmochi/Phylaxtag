@@ -132,6 +132,17 @@ test("mobile: warranty table header is hidden and h1 is 2.25rem at 375px", async
   expect(Number.parseFloat(fontSize)).toBeCloseTo(36, 1);
 });
 
+test("the Warranty link scrolls to the warranty table", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/");
+  const table = page.locator("#all-warranties");
+  await expect(table).toBeVisible();
+  await page.getByRole("link", { name: "Warranty", exact: true }).click();
+  // The table is rendered after the RPC answers, so the scroll is retried; the
+  // header row has to end up on screen instead of the reader staying at the top.
+  await expect(table).toBeInViewport();
+});
+
 test("app CSS does not leak into the wallet modal host", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");

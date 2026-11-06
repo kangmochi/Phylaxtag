@@ -110,6 +110,40 @@ export function Shell({
   const [walletBusy, setWalletBusy] = useState<string | null>(null);
   const [walletError, setWalletError] = useState<string | null>(null);
   const location = useLocation();
+
+  // A route change does not move the viewport on its own. Without this the
+  // "Warranty" link (which points at /#all-warranties) keeps the reader at the
+  // top of the home page, and back/forward keep the old scroll position. The
+  // warranty table only exists after the RPC answers, so look again for a few
+  // seconds instead of giving up on the first frame.
+  useEffect(() => {
+    const hash = location.hash.replace(/^#/, "");
+    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    if (!hash) {
+      window.scrollTo({ top: 0, behavior: "auto" });
+      return;
+    }
+    let tries = 0;
+    let timer: number | undefined;
+    const findAndScroll = () => {
+      const target = document.getElementById(hash);
+      if (target) {
+        target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+        return;
+      }
+      if (tries < 12) {
+        tries += 1;
+        timer = window.setTimeout(findAndScroll, 250);
+      }
+    };
+    findAndScroll();
+    return () => {
+      if (timer !== undefined) {
+        window.clearTimeout(timer);
+      }
+    };
+  }, [location.pathname, location.hash, location.key]);
+
   const currentToken = location.pathname.match(/^\/asset\/([^/]+)/)?.[1] ?? null;
   const lastToken = currentToken ?? readLastToken();
   // The EVM group needs a WalletConnect project id at build time; without it the
