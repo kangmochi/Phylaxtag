@@ -315,6 +315,8 @@ For a live walkthrough (about 90 seconds). The public run uses the deployed cont
 
 Both code-generation services are named above; no further code-generation service was used. Every change went through a pull request and a review; no agent holds a key or a seed phrase. An earlier revision of this README said that all code, including the web app, came from Cursor AI agents and that no other code-generation service was used; the lines above replace that sentence.
 
+Swarmpad is a later, separate project by the same author: a different product (proof-of-work token launches on NEAR) in its own repository. The two share no code, and nothing here is derived from it.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
