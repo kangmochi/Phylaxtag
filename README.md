@@ -61,7 +61,7 @@ curl -s https://rpc.testnet.fastnear.com -H 'content-type: application/json' \
   | jq -r .result.code_base64 | base64 -d | sha256sum
 ```
 
-Rebuilding `contract/` from this repository should produce a wasm with the same hash while the deployed code and the source stay in step.
+The published on-chain hash is the source of truth: read the code over RPC and hash the returned bytes, as above. A local rebuild of `contract/` may differ from the deployed wasm by a small number of bytes depending on the toolchain, so a matching hash is not guaranteed.
 
 Home labels: **All warranties**, **Your side**. Wallets: NEAR wallets come first and **Meteor** is the recommended one; **MyNearWallet is retired** for new app connections. EVM wallets (MetaMask, Coinbase Wallet, WalletConnect QR) ship in this repository but the group is hidden unless `VITE_WALLETCONNECT_PROJECT_ID` is set at build time, and **no EVM sign-in has been verified yet**.
 
@@ -94,12 +94,13 @@ From `contract/`, with Rust 1.99.1 (see `rust-toolchain.toml`; rustup installs i
 cargo build --target wasm32-unknown-unknown --release
 ```
 
-`contract/Cargo.toml` sets `[profile.release]` to `opt-level = "z"`, link-time optimisation, one codegen unit, `panic = "abort"`, `strip = true`, and `overflow-checks = true`. Measured on 4 November 2026 (Asia/Jakarta) with that toolchain:
+`contract/Cargo.toml` sets `[profile.release]` to `opt-level = "z"`, link-time optimisation, one codegen unit, `panic = "abort"`, `strip = true`, and `overflow-checks = true`. Measured with that toolchain; the deployed build is the 6 November 2026 rebuild:
 
 | Build | Wasm bytes | NEAR locked (bytes × 10^19 yoctoNEAR) |
 | --- | --- | --- |
 | Release before that profile | 592_362 | 5.92362 NEAR |
-| Release with that profile | 366_144 | 3.66144 NEAR |
+| Release with that profile, 4 Nov 2026 (historical) | 366_144 | 3.66144 NEAR |
+| Release with that profile, deployed build, 6 Nov 2026 | 367_712 | 3.67712 NEAR |
 
 `wasm-opt` was not on the machine, so there is no `wasm-opt -Oz` size. The tests load the Cargo release wasm, not a `wasm-opt` binary. The wasm file is gitignored.
 

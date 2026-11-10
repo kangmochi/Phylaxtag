@@ -1,6 +1,6 @@
 # Phylaxtag testnet deploy guide
 
-Version: 5 Nov 2026 (Asia/Jakarta). Checked against repo `kangmochi/phylaxtag` at `main` = `6d4fcdd` and against the live testnet contract. English only. **No keys, seed phrases or private credentials appear here, and none may be added.**
+Version: 10 Nov 2026 (Asia/Jakarta). Checked against repo `kangmochi/phylaxtag` at `main` = `f6bfecb` and against the live testnet contract. English only. **No keys, seed phrases or private credentials appear here, and none may be added.**
 
 Markers on commands:
 
@@ -17,7 +17,7 @@ Markers on commands:
 | Contract | `demo.phylaxtag-jiwoo-11041950.testnet` **[live]** |
 | Explorer | https://testnet.nearblocks.io/accounts/demo.phylaxtag-jiwoo-11041950.testnet |
 | Web app | https://phylaxtag.vercel.app/ **[live]** |
-| Demo token | `EB-005` — cap 0.3 NEAR, cooldown 900 s, expiry 2030-01-01; one claim of 0.3 NEAR paid, 0.7 NEAR left (RPC check, 6 Nov 2026) **[live]** |
+| Demo token | `EB-005` — cap 0.3 NEAR, cooldown 900 s, expiry 2030-01-01; one claim of 0.3 NEAR paid, 0.7 NEAR left (RPC check, 10 Nov 2026) **[live]** |
 
 If you redeploy under a new parent, replace `$PARENT` everywhere below. Never reuse a production seed, and never put one in chat or in a file.
 
