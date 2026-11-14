@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Link } from "react-router";
 
 import { formatNear, parseNearInput } from "../near/amounts";
 import type { Chain } from "../near/chain";
@@ -52,6 +51,7 @@ export function TryPage({
   const [title, setTitle] = useState("");
   const [tx, setTx] = useState<TxState>({ kind: "idle" });
   const [demoToken, setDemoToken] = useState<string | null>(null);
+  const [mintedId, setMintedId] = useState<string | null>(null);
 
   const parent = useMemo(() => parentOf(practiceContractId), [practiceContractId]);
   const defaultWorkshop = parent ? `ws-a.${parent}` : "ws-a.practice.testnet";
@@ -175,8 +175,13 @@ export function TryPage({
         onPhase: (phase) => setTx({ kind: phase }),
       });
       const minted = (result.returnValue ?? {}) as MintedToken;
-      const id = minted.token_id ?? "your tag";
-      setTx({ kind: "success", hash: result.hash, detail: `Minted ${id} on the practice contract.` });
+      const id = minted.token_id ?? "";
+      setMintedId(id || null);
+      setTx({
+        kind: "success",
+        hash: result.hash,
+        detail: id ? `Minted ${id} on the practice contract.` : "Minted on the practice contract.",
+      });
     } catch (caught) {
       const raw = caught instanceof Error ? caught.message : String(caught);
       setTx({ kind: "failure", ...explainError(raw) });
@@ -233,7 +238,16 @@ export function TryPage({
           <h2>You already minted your practice tag</h2>
           <p>
             The practice contract accepts one tag per account, so {accountId} cannot mint another one.
-            Open your tag from <Link to="/">the warranty list</Link>, or use a different account.
+            The practice deployment keeps its own token list, separate from the demo warranties, so open
+            it under{" "}
+            {practiceContractId ? (
+              <a href={`https://testnet.nearblocks.io/accounts/${practiceContractId}`} target="_blank" rel="noreferrer">
+                the practice explorer
+              </a>
+            ) : (
+              "the practice explorer"
+            )}
+            , or use a different account.
           </p>
         </div>
       ) : null}
@@ -319,6 +333,18 @@ export function TryPage({
         )}
 
         <TxNotice tx={tx} explorer={explorer} />
+        {mintedId && practiceContractId ? (
+          <p>
+            <a
+              href={`https://testnet.nearblocks.io/nft-token/${practiceContractId}/${mintedId}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {mintedId} on the block explorer
+            </a>{" "}
+            (the practice contract holds its own tokens, so it is not in the demo list on the home page).
+          </p>
+        ) : null}
         {demoToken ? (
           <p role="status">
             Demo mode minted <code>{demoToken}</code> in this tab only. Nothing was sent to a chain, and
