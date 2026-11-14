@@ -115,6 +115,15 @@ pub struct StorageInfo {
     pub contract_balance: NearToken,
 }
 
+/// `get_open_mint_info` payload: the limits of the practice mint.
+#[near(serializers = [json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OpenMintInfo {
+    pub minted_total: u64,
+    pub cap: u64,
+    pub expiry_ns: u64,
+}
+
 /// Spec 5.1b. `now_ns` is the block timestamp.
 pub(crate) fn display_status(asset: &Asset, now_ns: u64) -> String {
     let funded = !asset.balance.is_zero();

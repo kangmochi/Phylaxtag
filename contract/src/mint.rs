@@ -30,9 +30,12 @@ impl Contract {
         cooldown_ns: u64,
         workshops: Vec<AccountId>,
         metadata: TokenMetadata,
+        require_issuer: bool,
     ) -> Token {
         let issuer = env::predecessor_account_id();
-        refuse_unless!(self.issuers.contains(&issuer), "Not an approved issuer");
+        if require_issuer {
+            refuse_unless!(self.issuers.contains(&issuer), "Not an approved issuer");
+        }
         // Spec 5.1 writes "1..32 bytes". That is 1 to 32 inclusive, same style as "1..N".
         refuse_unless!((1..=32).contains(&token_id.len()), "Bad token_id");
         refuse_unless!(is_lowercase_hex_64(&serial_hash), "Bad serial_hash");
