@@ -90,8 +90,8 @@ Home labels: **All warranties**, **Your side**. Wallets: NEAR wallets come first
 - Run `cargo fmt --check` in `contract/` and in `integration-tests/` - see no diff. CI runs this.
 - Run `cargo clippy --all-targets -- -D warnings` in `contract/` and in `integration-tests/` - see no warnings. CI runs this.
 - Run `cargo build --target wasm32-unknown-unknown --release` in `contract/` - see `contract/target/wasm32-unknown-unknown/release/phylaxtag.wasm`. The wasm file is gitignored.
-- Run `npm test` in `web/` - see 75 tests pass (Vitest).
-- Run `npm run e2e` in `web/` - see 27 tests pass (Playwright).
+- Run `npm test` in `web/` - see 80 tests pass (Vitest).
+- Run `npm run e2e` in `web/` - see 28 tests pass (Playwright).
 - Deploy to testnet - the live demo uses `demo.phylaxtag-jiwoo-11041950.testnet` under parent `phylaxtag-jiwoo-11041950.testnet`; the full procedure is in [docs/TESTNET_DEPLOY_GUIDE.md](docs/TESTNET_DEPLOY_GUIDE.md).
 
 ## Build
@@ -276,9 +276,9 @@ npm run dev
 
 - Run `npm run typecheck` in `web/` - see no type errors.
 - Run `npm run lint` in `web/` - see no lint errors.
-- Run `npm test` in `web/` - see 70 tests pass.
+- Run `npm test` in `web/` - see 80 tests pass.
 - Run `npm run build` and then `npm run check:bundle` in `web/` - see "Production bundle is clean" and no test-wallet marker.
-- Run `npx playwright install chromium` once, then run `npm run e2e` in `web/` - see 27 tests pass (Playwright).
+- Run `npx playwright install chromium` once, then run `npm run e2e` in `web/` - see 28 tests pass (Playwright).
 
 The browser suite (27 tests) covers `T31 gated page access`, `T32 sell button flow` and `T38 status labels and next claim`, plus the wallet picker at 375 px, the EVM group with a dummy project id, the mobile table header, and the issuer gate. They set `VITE_TEST_WALLET=1`, which is a build flag. That build talks to an in-memory contract and switches account labels. It has no keys. The production build resolves the same import to a disabled module, and `check:bundle` fails if the test marker or a Google Fonts URL is in `web/dist`.
 
