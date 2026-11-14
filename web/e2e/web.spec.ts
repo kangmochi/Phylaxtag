@@ -114,9 +114,17 @@ test("/try mints a practice tag in demo mode and labels it as off-chain", async 
   // The e2e build sets no practice contract id, so the page must say so
   // instead of pretending a chain call would work.
   await expect(page.getByText("This build has no practice contract configured.")).toBeVisible();
-  await page.getByRole("button", { name: "Fill example values" }).click();
-  await page.getByRole("button", { name: "Mint in demo mode (nothing on chain)" }).click();
-  await expect(page.getByRole("status")).toContainText("Demo mode minted");
+  // Every field already holds a working default, so one click is enough.
+  const demo = page.getByRole("button", { name: "Mint in demo mode (nothing on chain)" });
+  await expect(demo).toBeEnabled();
+  await demo.click();
+  await expect(page.getByRole("status")).toContainText("Demo run 1");
+  await expect(page.getByRole("status")).toContainText("J-1");
+
+  // A judge presses twice: each run is a new demo account, so the second works.
+  await demo.click();
+  await expect(page.getByRole("status")).toContainText("Demo run 2");
+  await expect(page.getByRole("status")).toContainText("J-2");
   await expect(page.getByRole("status")).toContainText("Nothing was sent to a chain");
 });
 

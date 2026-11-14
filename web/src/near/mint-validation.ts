@@ -5,6 +5,7 @@
  * round trip, and the messages match the contract's own wording.
  */
 
+import { isNearAccountId } from "./account-id";
 import { parseNearInput } from "./amounts";
 
 export interface MintDraft {
@@ -80,6 +81,13 @@ export function mintProblems(draft: MintDraft): MintProblem[] {
   const workshops = draft.workshops.map((entry) => entry.trim()).filter(Boolean);
   if (workshops.length === 0) {
     problems.push({ field: "workshops", message: "Add at least one workshop account." });
+  }
+  const notAnAccount = workshops.filter((workshop) => !isNearAccountId(workshop));
+  if (notAnAccount.length > 0) {
+    problems.push({
+      field: "workshops",
+      message: `${notAnAccount.join(", ")} is not a NEAR account id. Use lowercase letters, digits, - and _, with dots for sub-accounts (for example ws-a.example.testnet).`,
+    });
   }
   const seen = new Set<string>();
   for (const workshop of workshops) {

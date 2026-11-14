@@ -29,6 +29,13 @@ const PANIC_PLAIN: ReadonlyArray<readonly [string, string]> = [
   ["Over cap", "That amount is over the per-claim cap."],
   ["Bad cap", "The cap must be greater than 0 and no more than the fund."],
   ["Expired", "This warranty has expired."],
+  // A wallet that returns no logs leaves only this sentence. A call that cannot
+  // be read at all (an invalid account id, for example) lands here, so say what
+  // tends to cause it instead of leaving the visitor with two words.
+  [
+    "Transaction failed",
+    "The wallet returned no reason from the contract. A value the contract cannot read at all, such as an account id with uppercase letters or a space, fails this way; otherwise it is a normal rejection.",
+  ],
 ];
 
 /**

@@ -1162,6 +1162,18 @@ body {
 
 .wallet-chip img { opacity: 0.9; }
 
+/* The practice page keeps the optional fields behind a disclosure, so a visitor
+   only has to press one button. */
+.advanced { margin-top: 0.5rem; }
+.advanced summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  padding: 0.35rem 0;
+}
+.advanced summary:hover { color: var(--text); }
+.advanced[open] summary { margin-bottom: 0.5rem; }
+
 .wallet-details { margin-top: 0.5rem; }
 .wallet-details summary {
   cursor: pointer;

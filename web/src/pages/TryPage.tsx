@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
+import { isNearAccountId } from "../near/account-id";
 import { formatNear, parseNearInput } from "../near/amounts";
 import type { Chain } from "../near/chain";
 import { estimateMintDeposit } from "../near/deposit";
@@ -22,6 +23,14 @@ interface MintedToken {
 
 const THIRTY_DAYS_NS = 30n * 86_400n * 1_000_000_000n;
 
+/** One account id per entry; a comma is accepted as a separator too. */
+function splitWorkshops(value: string): string[] {
+  return value
+    .split(/[\s,]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 /** `sandbox.<parent>` belongs to `<parent>`, so the workshop hint follows it. */
 function parentOf(contractId: string): string {
   const dot = contractId.indexOf(".");
@@ -43,14 +52,17 @@ export function TryPage({
   const [info, setInfo] = useState<OpenMintInfo | null>(null);
   const [used, setUsed] = useState(false);
   const [salt] = useState(randomSaltHex);
-  const [serial, setSerial] = useState("");
+  const [serial, setSerial] = useState("PRACTICE-1");
   const [fund, setFund] = useState("0.5");
   const [cap, setCap] = useState("0.25");
   const [cooldownSeconds, setCooldownSeconds] = useState("60");
   const [workshop, setWorkshop] = useState("");
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState("Practice tag");
   const [tx, setTx] = useState<TxState>({ kind: "idle" });
   const [demoToken, setDemoToken] = useState<string | null>(null);
+  const [demoRuns, setDemoRuns] = useState(0);
+  // One stand-in per tab, so the practice tags pile up and the ids count up.
+  const demoContract = useRef<unknown>(null);
   const [mintedId, setMintedId] = useState<string | null>(null);
 
   const parent = useMemo(() => parentOf(practiceContractId), [practiceContractId]);
@@ -99,6 +111,12 @@ export function TryPage({
     };
   }, [chain, accountId, practiceContractId, tx]);
 
+  // A visitor should not have to invent a workshop: the project workshop is
+  // pre-filled, and the whole field list sits under "Advanced options".
+  useEffect(() => {
+    setWorkshop((current) => (current.trim() ? current : defaultWorkshop));
+  }, [defaultWorkshop]);
+
   const problems = useMemo(() => {
     const list: string[] = [];
     if (!(Number(fund) > 0)) {
@@ -116,9 +134,15 @@ export function TryPage({
     if (!serial.trim()) {
       list.push("Enter any serial text; only its hash is sent.");
     }
-    const workshops = workshop.split(/\s+/).map((item) => item.trim()).filter(Boolean);
+    const workshops = splitWorkshops(workshop);
     if (workshops.length === 0) {
       list.push("Enter one workshop account id.");
+    }
+    const notAnAccount = workshops.filter((item) => !isNearAccountId(item));
+    if (notAnAccount.length > 0) {
+      list.push(
+        `${notAnAccount.join(", ")} is not a NEAR account id. It is an account, not a label: use lowercase letters, digits, - and _, with dots for sub-accounts (for example ws-a.${parent || "example.testnet"}).`,
+      );
     }
     if (accountId && workshops.includes(accountId)) {
       list.push("The workshop cannot be your own account.");
@@ -141,7 +165,7 @@ export function TryPage({
         title,
         description: "Practice tag",
         extra: "",
-        workshops: workshop.split(/\s+/).map((item) => item.trim()).filter(Boolean),
+        workshops: splitWorkshops(workshop),
       });
     } catch {
       return null;
@@ -154,9 +178,18 @@ export function TryPage({
       fund_amount: estimate ? estimate.fundYocto.toString() : "0",
       claim_cap: parseNearInput(cap).toString(),
       cooldown_ns: (BigInt(cooldownSeconds) * 1_000_000_000n).toString(),
-      workshops: workshop.split(/\s+/).map((item) => item.trim()).filter(Boolean),
+      workshops: splitWorkshops(workshop),
       metadata: { title: title.trim(), description: "Practice tag", copies: 1 },
     };
+  }
+
+  function resetDefaults() {
+    setSerial("PRACTICE-1");
+    setFund("0.5");
+    setCap("0.25");
+    setCooldownSeconds("60");
+    setWorkshop(defaultWorkshop);
+    setTitle("Practice tag");
   }
 
   async function mint(event: FormEvent) {
@@ -197,12 +230,20 @@ export function TryPage({
       // The stand-in lives in the bundle for this section only; it never signs,
       // never holds a key, and nothing it does reaches a chain.
       const { FakeContract } = await import("../test-wallet/fake-contract");
-      const fake = new FakeContract(practiceContractId || "practice.testnet");
+      const fake = (demoContract.current ??= new FakeContract(practiceContractId || "practice.testnet")) as InstanceType<
+        typeof FakeContract
+      >;
       const callArgs = requestArgs(hashed);
+      // The contract allows one tag per wallet, so each demo run is a new demo
+      // account: a judge can press the button as often as they like.
+      const run = demoRuns + 1;
+      const signer = run === 1 ? "judge.test" : `judge-${run}.test`;
       // The stand-in checks the same deposit rule as the contract, and there is
       // no real money here, so the fund amount stands in for the deposit.
-      const minted = fake.call("mint_open", callArgs, "you.test", callArgs.fund_amount) as MintedToken;
+      const minted = fake.call("mint_open", callArgs, signer, callArgs.fund_amount) as MintedToken;
       setDemoToken(minted.token_id ?? null);
+      setDemoRuns(run);
+      setSerial(`PRACTICE-${run + 1}`);
       setTx({ kind: "idle" });
     } catch (caught) {
       const raw = caught instanceof Error ? caught.message : String(caught);
@@ -249,47 +290,53 @@ export function TryPage({
             )}
             , or use a different account.
           </p>
+          <p className="note">
+            Want to press mint a few more times? Demo mode needs no wallet and no second account.
+          </p>
+          <button type="button" className="secondary" onClick={() => void demoMint()} disabled={problems.length > 0}>
+            Mint in demo mode (nothing on chain)
+          </button>
         </div>
       ) : null}
 
       <form onSubmit={(event) => void mint(event)}>
-        <button
-          type="button"
-          className="secondary"
-          onClick={() => {
-            setSerial("PRACTICE-1");
-            setFund("0.5");
-            setCap("0.25");
-            setCooldownSeconds("60");
-            setWorkshop(defaultWorkshop);
-            setTitle("Practice tag");
-          }}
-        >
-          Fill example values
-        </button>
-        <Field id="try-serial" label="Serial (any text; it stays in this browser, only the hash is sent)">
-          <input id="try-serial" value={serial} placeholder="e.g. PRACTICE-1" onChange={(event) => setSerial(event.target.value)} />
-        </Field>
         <Field id="try-fund" label="Fund (NEAR) — you pay this into the tag">
           <input id="try-fund" value={fund} inputMode="decimal" onChange={(event) => setFund(event.target.value)} />
         </Field>
-        <Field id="try-cap" label="Per-claim cap (NEAR)">
-          <input id="try-cap" value={cap} inputMode="decimal" onChange={(event) => setCap(event.target.value)} />
-        </Field>
-        <Field id="try-cooldown" label="Cooldown (seconds)">
-          <input id="try-cooldown" value={cooldownSeconds} inputMode="numeric" onChange={(event) => setCooldownSeconds(event.target.value)} />
-        </Field>
-        <Field id="try-workshop" label="Workshop account id">
-          <input
-            id="try-workshop"
-            value={workshop}
-            placeholder={defaultWorkshop || "ws-a.example.testnet"}
-            onChange={(event) => setWorkshop(event.target.value)}
-          />
-        </Field>
-        <Field id="try-title" label="Tag title">
-          <input id="try-title" value={title} placeholder="e.g. Practice tag" onChange={(event) => setTitle(event.target.value)} />
-        </Field>
+        <p className="note">
+          Everything else already has a working value. Open “Advanced options” only if you want a
+          different tag title, cap, cooldown, workshop or serial.
+        </p>
+        <details className="card advanced">
+          <summary>Advanced options</summary>
+          <Field id="try-title" label="Tag title">
+            <input id="try-title" value={title} placeholder="e.g. Practice tag" onChange={(event) => setTitle(event.target.value)} />
+          </Field>
+          <Field id="try-cap" label="Per-claim cap (NEAR)">
+            <input id="try-cap" value={cap} inputMode="decimal" onChange={(event) => setCap(event.target.value)} />
+          </Field>
+          <Field id="try-cooldown" label="Cooldown (seconds)">
+            <input id="try-cooldown" value={cooldownSeconds} inputMode="numeric" onChange={(event) => setCooldownSeconds(event.target.value)} />
+          </Field>
+          <Field id="try-workshop" label="Workshop account id (where a claim would be paid)">
+            <input
+              id="try-workshop"
+              value={workshop}
+              placeholder={defaultWorkshop || "ws-a.example.testnet"}
+              onChange={(event) => setWorkshop(event.target.value)}
+            />
+            <span className="note">
+              Already set to this project's workshop. A claim pays this account, so it has to be a
+              real NEAR account, not a label like “E-bike”.
+            </span>
+          </Field>
+          <Field id="try-serial" label="Serial (any text; it stays in this browser, only the hash is sent)">
+            <input id="try-serial" value={serial} placeholder="e.g. PRACTICE-1" onChange={(event) => setSerial(event.target.value)} />
+          </Field>
+          <button type="button" className="secondary" onClick={resetDefaults}>
+            Reset the defaults
+          </button>
+        </details>
 
         {showProblems ? (
           <ul className="alert" role="alert">
@@ -347,8 +394,9 @@ export function TryPage({
         ) : null}
         {demoToken ? (
           <p role="status">
-            Demo mode minted <code>{demoToken}</code> in this tab only. Nothing was sent to a chain, and
-            reloading forgets it.
+            Demo run {demoRuns}: minted <code>{demoToken}</code> in this tab only. Nothing was sent to a
+            chain, and reloading forgets it. The contract allows one tag per wallet, so each run uses a
+            fresh demo account — press it as often as you like.
           </p>
         ) : null}
       </form>
