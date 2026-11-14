@@ -15,6 +15,17 @@ export function createTestChain(config: AppConfig): Chain {
   let txCount = 0;
   const notify = () => listeners.forEach((listener) => listener());
 
+  function send(request: CallRequest) {
+    request.onPhase("waiting");
+    if (!accountId) {
+      throw new Error("Connect a test account to continue.");
+    }
+    request.onPhase("pending");
+    const returnValue = fake.call(request.method, request.args, accountId, request.depositYocto);
+    txCount += 1;
+    return Promise.resolve({ hash: `test-${txCount}`, returnValue });
+  }
+
   return {
     async ready() {
       return undefined;
@@ -39,15 +50,12 @@ export function createTestChain(config: AppConfig): Chain {
     async view<T>(method: string, args: Record<string, unknown>) {
       return fake.view(method, args) as Promise<T>;
     },
-    async call(request: CallRequest) {
-      request.onPhase("waiting");
-      if (!accountId) {
-        throw new Error("Connect a test account to continue.");
-      }
-      request.onPhase("pending");
-      const returnValue = fake.call(request.method, request.args, accountId, request.depositYocto);
-      txCount += 1;
-      return { hash: `test-${txCount}`, returnValue };
+    // The in-memory stand-in has no second deployment, so every contract id
+    // resolves to it. The practice page marks that clearly in the UI.
+    async viewOn<T>(_contractId: string, method: string, args: Record<string, unknown>) {
+      return fake.view(method, args) as Promise<T>;
     },
+    callOn: (_contractId: string, request: CallRequest) => send(request),
+    call: send,
   };
 }

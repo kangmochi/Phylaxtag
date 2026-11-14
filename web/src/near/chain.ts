@@ -26,5 +26,9 @@ export interface Chain {
   unavailableWallets?(): string[];
   subscribe(listener: () => void): () => void;
   view<T>(method: string, args: Record<string, unknown>): Promise<T>;
+  /** View on another contract id. Used by the practice page. */
+  viewOn?<T>(contractId: string, method: string, args: Record<string, unknown>): Promise<T>;
   call(request: CallRequest): Promise<CallResult>;
+  /** Call another contract id. Used by the practice page. */
+  callOn?(contractId: string, request: CallRequest): Promise<CallResult>;
 }

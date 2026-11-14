@@ -241,6 +241,7 @@ export function Shell({
                 <NavLink to="/" end>Home</NavLink>
                 <Link to={lastToken ? `/asset/${lastToken}` : "/#all-warranties"}>Warranty</Link>
                 <NavLink to="/issuer">Issuer</NavLink>
+                <NavLink to="/try">Try it</NavLink>
                 <NavLink to="/workshop">Workshop</NavLink>
                 <NavLink to="/how-it-works">How it works</NavLink>
               </div>
@@ -300,6 +301,7 @@ export function Shell({
                 <li><Link to="/">Home</Link></li>
                 <li><Link to="/how-it-works">How it works</Link></li>
                 <li><Link to="/issuer">Issuer</Link></li>
+                <li><Link to="/try">Try it</Link></li>
                 <li><Link to="/workshop">Workshop</Link></li>
               </ul>
             </div>

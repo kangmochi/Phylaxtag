@@ -73,7 +73,12 @@ async function postView(url: string, body: string): Promise<unknown> {
  * Call VITE_RPC_URL first, then VITE_RPC_FALLBACK_URL once, only for failures
  * another node could fix (network error, HTTP 429/5xx, deprecated node).
  */
-export async function rpcView(config: AppConfig, method: string, args: Record<string, unknown>): Promise<unknown> {
+export async function rpcView(
+  config: AppConfig,
+  method: string,
+  args: Record<string, unknown>,
+  contractId: string = config.contractId,
+): Promise<unknown> {
   const body = JSON.stringify({
     jsonrpc: "2.0",
     id: "phylaxtag",
@@ -81,7 +86,7 @@ export async function rpcView(config: AppConfig, method: string, args: Record<st
     params: {
       request_type: "call_function",
       finality: "final",
-      account_id: config.contractId,
+      account_id: contractId,
       method_name: method,
       args_base64: btoa(JSON.stringify(args)),
     },

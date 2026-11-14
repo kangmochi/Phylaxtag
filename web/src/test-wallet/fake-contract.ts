@@ -11,6 +11,9 @@ const TEN = (10n * NEAR).toString();
 const EIGHT = (8n * NEAR).toString();
 const THREE = (3n * NEAR).toString();
 const HISTORY_LIMIT = 50;
+/** Practice mints this stand-in accepts, same number as the contract. */
+const OPEN_MINT_CAP = 100;
+const OPEN_MINT_EXPIRY_NS = 30n * 86_400_000n * 1_000_000n;
 
 export const TEST_ACCOUNTS = ["alice.test", "budi.test", "issuer.test"] as const;
 
@@ -67,6 +70,8 @@ function panic(message: string): never {
 export class FakeContract {
   private tokens = new Map<string, TokenState>();
   private issuers = new Set<string>(["issuer.test"]);
+  private openMints = new Set<string>();
+  private openTotal = 0;
   private serials = new Set<string>();
   private height = 1n;
   readonly contractId: string;
@@ -196,6 +201,12 @@ export class FakeContract {
         reference_hash: null,
       };
     }
+    if (method === "get_open_mint_info") {
+      return { minted_total: this.openTotal, cap: OPEN_MINT_CAP, expiry_ns: OPEN_MINT_EXPIRY_NS.toString() };
+    }
+    if (method === "open_mint_used") {
+      return this.openMints.has(String(args.account_id ?? ""));
+    }
     if (method === "nft_tokens" || method === "nft_tokens_for_owner") {
       const owner = typeof args.account_id === "string" ? args.account_id : null;
       return [...this.tokens.entries()]
@@ -233,6 +244,9 @@ export class FakeContract {
   call(method: string, args: Record<string, unknown>, signer: string, depositYocto: string): unknown {
     if (method === "mint") {
       return this.mint(args, signer, depositYocto);
+    }
+    if (method === "mint_open") {
+      return this.mintOpen(args, signer, depositYocto);
     }
     if (method === "pay_service") {
       return this.pay(args, signer, depositYocto);
@@ -275,10 +289,32 @@ export class FakeContract {
   }
 
   private mint(args: Record<string, unknown>, signer: string, depositYocto: string): unknown {
-    if (!this.issuers.has(signer)) {
+    return this.mintCommon(args, signer, depositYocto, {});
+  }
+
+  /** The open path behind `/try`: no allowlist, one per account, fixed 30 days. */
+  private mintOpen(args: Record<string, unknown>, signer: string, depositYocto: string): unknown {
+    const expiry = BigInt(nowNs()) + OPEN_MINT_EXPIRY_NS;
+    return this.mintCommon(args, signer, depositYocto, { open: true, expiry });
+  }
+
+  private mintCommon(
+    args: Record<string, unknown>,
+    signer: string,
+    depositYocto: string,
+    opts: { open?: boolean; expiry?: bigint },
+  ): unknown {
+    if (opts.open) {
+      if (this.openTotal >= OPEN_MINT_CAP) {
+        panic("Practice cap reached");
+      }
+      if (this.openMints.has(signer)) {
+        panic("One practice tag per wallet");
+      }
+    } else if (!this.issuers.has(signer)) {
       panic("Not an approved issuer");
     }
-    const tokenId = String(args.token_id ?? "");
+    const tokenId = opts.open ? `J-${this.openTotal + 1}` : String(args.token_id ?? "");
     if (tokenId.length < 1 || tokenId.length > 32) {
       panic("Bad token_id");
     }
@@ -292,7 +328,7 @@ export class FakeContract {
     if (this.serials.has(`${signer}:${serial}`)) {
       panic("Serial already used");
     }
-    const expiry = BigInt(String(args.expiry));
+    const expiry = opts.expiry ?? BigInt(String(args.expiry));
     if (expiry <= BigInt(nowNs())) {
       panic("Bad expiry");
     }
@@ -342,6 +378,10 @@ export class FakeContract {
     token.metadataTitle = metadata.title ?? token.metadataTitle;
     this.tokens.set(tokenId, token);
     this.serials.add(`${signer}:${serial}`);
+    if (opts.open) {
+      this.openMints.add(signer);
+      this.openTotal += 1;
+    }
     return { token_id: tokenId, owner_id: signer };
   }
 
