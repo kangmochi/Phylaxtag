@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 
+import { isNearAccountId } from "../near/account-id";
 import { formatNear, parseNearInput } from "../near/amounts";
 import type { Chain } from "../near/chain";
 import { estimateMintDeposit } from "../near/deposit";
@@ -21,6 +22,14 @@ interface MintedToken {
 }
 
 const THIRTY_DAYS_NS = 30n * 86_400n * 1_000_000_000n;
+
+/** One account id per entry; a comma is accepted as a separator too. */
+function splitWorkshops(value: string): string[] {
+  return value
+    .split(/[\s,]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
 
 /** `sandbox.<parent>` belongs to `<parent>`, so the workshop hint follows it. */
 function parentOf(contractId: string): string {
@@ -116,9 +125,15 @@ export function TryPage({
     if (!serial.trim()) {
       list.push("Enter any serial text; only its hash is sent.");
     }
-    const workshops = workshop.split(/\s+/).map((item) => item.trim()).filter(Boolean);
+    const workshops = splitWorkshops(workshop);
     if (workshops.length === 0) {
       list.push("Enter one workshop account id.");
+    }
+    const notAnAccount = workshops.filter((item) => !isNearAccountId(item));
+    if (notAnAccount.length > 0) {
+      list.push(
+        `${notAnAccount.join(", ")} is not a NEAR account id. It is an account, not a label: use lowercase letters, digits, - and _, with dots for sub-accounts (for example ws-a.${parent || "example.testnet"}).`,
+      );
     }
     if (accountId && workshops.includes(accountId)) {
       list.push("The workshop cannot be your own account.");
@@ -141,7 +156,7 @@ export function TryPage({
         title,
         description: "Practice tag",
         extra: "",
-        workshops: workshop.split(/\s+/).map((item) => item.trim()).filter(Boolean),
+        workshops: splitWorkshops(workshop),
       });
     } catch {
       return null;
@@ -154,7 +169,7 @@ export function TryPage({
       fund_amount: estimate ? estimate.fundYocto.toString() : "0",
       claim_cap: parseNearInput(cap).toString(),
       cooldown_ns: (BigInt(cooldownSeconds) * 1_000_000_000n).toString(),
-      workshops: workshop.split(/\s+/).map((item) => item.trim()).filter(Boolean),
+      workshops: splitWorkshops(workshop),
       metadata: { title: title.trim(), description: "Practice tag", copies: 1 },
     };
   }

@@ -34,6 +34,13 @@ describe("mint form checks", () => {
     expect(fields(draft({ tokenId: "x".repeat(32) }))).not.toContain("tokenId");
   });
 
+  it("rejects a workshop entry that is not an account id", () => {
+    const problems = mintProblems(draft({ workshops: ["E-bike"] }));
+    expect(problems.map((problem) => problem.field)).toContain("workshops");
+    expect(problems[0]?.message).toContain("is not a NEAR account id");
+    expect(mintProblems(draft({ workshops: [WS_A, "budi.test"] }))).toEqual([]);
+  });
+
   it("asks for the serial that stays off-chain", () => {
     expect(fields(draft({ serial: "" }))).toContain("serial");
   });
