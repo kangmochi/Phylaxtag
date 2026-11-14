@@ -8,13 +8,15 @@ mod events;
 mod expire;
 mod holders;
 mod mint;
+mod open_mint;
 mod pay;
 mod storage;
 mod types;
 
+pub use open_mint::{OPEN_MINT_CAP, OPEN_MINT_EXPIRY_NS};
 pub use types::{
-    Asset, AssetView, HolderHistory, HolderRecord, ServiceRecord, ServiceStatus, StorageInfo,
-    WarrantyStatus,
+    Asset, AssetView, HolderHistory, HolderRecord, OpenMintInfo, ServiceRecord, ServiceStatus,
+    StorageInfo, WarrantyStatus,
 };
 
 /// Static gas attached to `on_payout` and `on_expire_payout`.
@@ -70,6 +72,7 @@ enum StorageKey {
     HoldersFor { token_hash: Vec<u8> },
     UsedSerials,
     Issuers,
+    OpenMints,
 }
 
 /// Spec 5.3.
@@ -84,6 +87,10 @@ pub struct Contract {
     issuers: LookupSet<AccountId>,
     admin: AccountId,
     total_locked: NearToken,
+    /// Accounts that already took their one practice tag (`mint_open`).
+    open_mints: LookupSet<AccountId>,
+    /// Practice tags minted so far, also the counter behind `J-<n>`.
+    open_mint_total: u64,
 }
 
 #[near]
@@ -121,6 +128,8 @@ impl Contract {
             issuers: issuer_set,
             admin,
             total_locked: NearToken::from_yoctonear(0),
+            open_mints: LookupSet::new(StorageKey::OpenMints),
+            open_mint_total: 0,
         }
     }
 
@@ -158,7 +167,50 @@ impl Contract {
             cooldown_ns.0,
             workshops,
             metadata,
+            true,
         )
+    }
+
+    /// Sandbox-only practice mint, used by the judge contract.
+    ///
+    /// No allowlist: the caller funds the warranty, so nothing can be drained.
+    /// The contract picks the token id (`J-<n>`) and fixes the expiry at mint
+    /// time + 30 days, so a visitor cannot leave a tag open forever. One tag
+    /// per account, and the contract stops at `OPEN_MINT_CAP` tags in total.
+    /// Every other mint rule (serial hash, cap, cooldown, workshops, deposit)
+    /// is the same as `mint`.
+    #[payable]
+    pub fn mint_open(
+        &mut self,
+        serial_hash: String,
+        fund_amount: NearToken,
+        claim_cap: NearToken,
+        cooldown_ns: U64,
+        workshops: Vec<AccountId>,
+        metadata: TokenMetadata,
+    ) -> Token {
+        self.perform_mint_open(
+            serial_hash,
+            fund_amount,
+            claim_cap,
+            cooldown_ns.0,
+            workshops,
+            metadata,
+        )
+    }
+
+    /// Limits and progress of the practice mint, for the sandbox page.
+    pub fn get_open_mint_info(&self) -> OpenMintInfo {
+        OpenMintInfo {
+            minted_total: self.open_mint_total,
+            cap: OPEN_MINT_CAP,
+            expiry_ns: OPEN_MINT_EXPIRY_NS,
+        }
+    }
+
+    /// `true` once this account has taken its practice tag.
+    pub fn open_mint_used(&self, account_id: AccountId) -> bool {
+        self.open_mints.contains(&account_id)
     }
 
     /// Spec 5.1, 5.2; tests T01, T02, T03, T04, T05, T07, T12, T15, T16, T18, T23, T27, T30, T35.

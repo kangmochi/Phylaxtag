@@ -4,6 +4,7 @@ import type { AppConfig } from "../config";
 import { NETWORK_MESSAGE, rpcView } from "./rpc";
 
 const CONFIG: AppConfig = {
+  practiceContractId: "",
   contractId: "phylaxtag.testnet",
   rpcUrl: "https://primary.example",
   rpcFallbackUrl: "https://fallback.example",

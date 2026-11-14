@@ -10,6 +10,7 @@ import { HowPage } from "./pages/HowPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { IssuerPage } from "./pages/IssuerPage";
 import { OwnerPage } from "./pages/OwnerPage";
+import { TryPage } from "./pages/TryPage";
 import { WorkshopPage } from "./pages/WorkshopPage";
 import { Shell } from "./ui";
 
@@ -32,6 +33,17 @@ export function App({ chain, config }: { chain: Chain; config: AppConfig }) {
           <Route path="/issuer" element={<IssuerPage chain={chain} accountId={accountId} contractId={config.contractId} explorer={config.explorerTxUrl} />} />
           <Route path="/workshop" element={<WorkshopPage chain={chain} />} />
           <Route path="/how-it-works" element={<HowPage chain={chain} contractId={config.contractId} />} />
+          <Route
+            path="/try"
+            element={
+              <TryPage
+                chain={chain}
+                accountId={accountId}
+                practiceContractId={config.practiceContractId}
+                explorer={config.explorerTxUrl}
+              />
+            }
+          />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Shell>

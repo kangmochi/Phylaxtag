@@ -91,6 +91,7 @@ encoding is explicit and cannot silently lose precision.
 | `new(admin, issuers)` | Deployer | Set admin and issuer allowlist | Once only |
 | `add_issuer(account)` | Admin | Add an issuer | Caller = admin |
 | `mint(token_id, serial_hash, fund_amount, expiry, claim_cap, cooldown_ns, workshops, metadata)` payable | Allowlisted issuer | Create an NFT owned by the issuer; store the asset; `balance = fund_amount`; write the first holder record and an empty history; refund deposit excess; return the minted `Token` | Issuer allowlisted; token id 1..=32 bytes; serial hash exactly 64 lowercase hex; token id new; serial new for this issuer; expiry in the future; `0 < claim_cap <= fund`; `cooldown_ns > 0`; workshops 1..N, no duplicates, not the issuer, not the contract; deposit ≥ fund + storage + worst-case prepay |
+| `mint_open(serial_hash, fund_amount, claim_cap, cooldown_ns, workshops, metadata)` payable | Anyone (practice deployment only) | Same mint as above, without the allowlist: the caller becomes the issuer and owner, the contract picks `token_id = J-<n>`, and the expiry is fixed at `block_timestamp + 30 days` | One tag per account; `n < 100`; every other mint check from the row above; the caller pays fund, storage and prepay |
 | `pay_service(token_id, workshop, amount, note_hash, work_type)` payable, 1 yocto | Current owner | Deduct balance, append a `Pending` record, emit `service_requested`, send NEAR to the workshop, callback `on_payout` | Token exists; exactly 1 yocto; caller = owner; not expired; no active approvals; workshop on the list; workshop ≠ owner; amount > 0; amount ≤ cap; amount ≤ balance; cooldown elapsed; fewer than 50 records; work type ≤ 32 bytes; note hash 64 lowercase hex |
 | `nft_transfer` | Owner or approved account | Standard NEP-171 transfer; fund and history stay on the token; holder log appended (drop-oldest) | Standard (1 yocto), approvals cleared, never fails because of the log |
 | `nft_transfer_call` | — | Disabled in the MVP | Always panics: `nft_transfer_call disabled in MVP` |
@@ -137,6 +138,8 @@ transaction outcome and shows the reason, falling back to the trap text only whe
 missing. The web app shows the original string next to its
 plain-English mapping and never guesses.
 
+- `mint_open`: `Practice cap reached`, `One practice tag per wallet`, plus the `mint` reasons
+  below, except `Not an approved issuer`.
 - `mint`: `Not an approved issuer`, `Bad token_id`, `Bad serial_hash`, `Token exists`,
   `Serial already used`, `Bad expiry`, `Bad cap`, `Cooldown must be > 0`,
   `Bad workshop list`, `Deposit too small`, `Already initialized`.

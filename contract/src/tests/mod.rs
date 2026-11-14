@@ -8,6 +8,7 @@ use super::*;
 mod common;
 mod expire;
 mod mint;
+mod open_mint;
 mod pay;
 mod storage;
 mod transfer;

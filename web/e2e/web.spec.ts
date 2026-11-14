@@ -64,6 +64,7 @@ test("testnet badge is visible on every route", async ({ page }) => {
     "/issuer",
     "/workshop",
     "/how-it-works",
+    "/try",
     "/does-not-exist",
   ]) {
     await page.goto(path);
@@ -105,6 +106,18 @@ test("issuer page hides the mint form until a wallet is connected", async ({ pag
   await expect(page.locator("#token-id")).toBeVisible();
   await expect(page.getByRole("button", { name: "Mint warranty" })).toBeVisible();
   await expect(page.getByText("Only accounts on the issuer allowlist can mint.")).toBeVisible();
+});
+
+test("/try mints a practice tag in demo mode and labels it as off-chain", async ({ page }) => {
+  await page.goto("/try");
+  await expect(page.getByRole("heading", { name: "Try minting a tag" })).toBeVisible();
+  // The e2e build sets no practice contract id, so the page must say so
+  // instead of pretending a chain call would work.
+  await expect(page.getByText("This build has no practice contract configured.")).toBeVisible();
+  await page.getByRole("button", { name: "Fill example values" }).click();
+  await page.getByRole("button", { name: "Mint in demo mode (nothing on chain)" }).click();
+  await expect(page.getByRole("status")).toContainText("Demo mode minted");
+  await expect(page.getByRole("status")).toContainText("Nothing was sent to a chain");
 });
 
 test("a non-issuer sees the allowlist message from the contract", async ({ page }) => {

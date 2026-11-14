@@ -63,8 +63,18 @@ export function lazyNearChain(
     view<T>(method: string, args: Record<string, unknown>) {
       return rpcView(config, method, args) as Promise<T>;
     },
+    viewOn<T>(contractId: string, method: string, args: Record<string, unknown>) {
+      return rpcView(config, method, args, contractId) as Promise<T>;
+    },
     async call(request) {
       return (await inner()).call(request);
+    },
+    async callOn(contractId, request) {
+      const chain = await inner();
+      if (chain.callOn) {
+        return chain.callOn(contractId, request);
+      }
+      return chain.call(request);
     },
   };
 }

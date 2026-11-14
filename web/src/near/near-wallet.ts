@@ -8,7 +8,7 @@ import {
 
 import type { AppConfig } from "../config";
 import { settleWalletLoaders, usableWalletId } from "../wallets";
-import type { Chain } from "./chain";
+import type { CallRequest, CallResult, Chain } from "./chain";
 import { rpcView } from "./rpc";
 
 interface OutcomeLike {
@@ -149,7 +149,7 @@ export function createNearChain(config: AppConfig): Chain {
     };
     await wallet.signIn({
       contractId: config.contractId,
-      methodNames: ["mint", "pay_service", "nft_transfer", "expire"],
+      methodNames: ["mint", "mint_open", "pay_service", "nft_transfer", "expire"],
     });
     accountId = selected.store.getState().accounts[0]?.accountId ?? null;
     writeStorage(SESSION_KEY, accountId ? "1" : null);
@@ -202,38 +202,52 @@ export function createNearChain(config: AppConfig): Chain {
     async view<T>(method: string, args: Record<string, unknown>) {
       return rpcView(config, method, args) as Promise<T>;
     },
+    async viewOn<T>(contractId: string, method: string, args: Record<string, unknown>) {
+      return rpcView(config, method, args, contractId) as Promise<T>;
+    },
     async call(request) {
-      request.onPhase("waiting");
-      const selected = await selector();
-      if (!selected.isSignedIn()) {
-        throw new Error("Connect a testnet wallet to continue.");
-      }
-      const wallet = await selected.wallet();
-      request.onPhase("pending");
-      const outcome = await wallet.signAndSendTransaction({
-        signerId: accountId ?? undefined,
-        receiverId: config.contractId,
-        actions: [
-          actionCreators.functionCall(
-            request.method,
-            request.args,
-            BigInt(request.gas),
-            BigInt(request.depositYocto),
-          ),
-        ],
-      });
-      if (!outcome) {
-        return { hash: "", returnValue: null };
-      }
-      const failure = failureMessage(outcome);
-      if (failure) {
-        // Keep the hash so the page can still link the failed transaction.
-        throw Object.assign(new Error(failure), { hash: outcome.transaction_outcome?.id ?? "" });
-      }
-      return {
-        hash: outcome.transaction_outcome?.id ?? "",
-        returnValue: returnValue(outcome),
-      };
+      return sendTo(config.contractId, request);
+    },
+    async callOn(contractId: string, request) {
+      return sendTo(contractId, request);
     },
   };
+
+  /**
+   * One transaction sender for every receiver. `call` targets the demo
+   * contract; `callOn` targets the practice contract behind `/try`.
+   */
+  async function sendTo(receiverId: string, request: CallRequest): Promise<CallResult> {
+    request.onPhase("waiting");
+    const selected = await selector();
+    if (!selected.isSignedIn()) {
+      throw new Error("Connect a testnet wallet to continue.");
+    }
+    const wallet = await selected.wallet();
+    request.onPhase("pending");
+    const outcome = await wallet.signAndSendTransaction({
+      signerId: accountId ?? undefined,
+      receiverId,
+      actions: [
+        actionCreators.functionCall(
+          request.method,
+          request.args,
+          BigInt(request.gas),
+          BigInt(request.depositYocto),
+        ),
+      ],
+    });
+    if (!outcome) {
+      return { hash: "", returnValue: null };
+    }
+    const failure = failureMessage(outcome);
+    if (failure) {
+      // Keep the hash so the page can still link the failed transaction.
+      throw Object.assign(new Error(failure), { hash: outcome.transaction_outcome?.id ?? "" });
+    }
+    return {
+      hash: outcome.transaction_outcome?.id ?? "",
+      returnValue: returnValue(outcome),
+    };
+  }
 }

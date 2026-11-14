@@ -44,12 +44,13 @@ leave the warranties fully usable through the CLI; deleting the contract would l
 | `contract/src/lib.rs` | Storage keys, the `Contract` struct, `new`/`add_issuer`, the public NEP-171 surface and the view methods |
 | `contract/src/types.rs` | `Asset`, `ServiceRecord`, `HolderRecord`, view structs, `display_status`, `next_claim_ns` |
 | `contract/src/mint.rs` | `perform_mint`: validation, storage measurement, fund accounting, first holder record |
+| `contract/src/open_mint.rs` | `perform_mint_open`: the practice mint (`mint_open`), with the per-account set, the 100-tag cap and the fixed 30-day expiry |
 | `contract/src/pay.rs` | `perform_pay_service`, `on_payout`, the claim-limit checks and the callback restore path |
 | `contract/src/expire.rs` | `perform_expire`, `on_expire_payout`, the `pending_refund` no-op rule |
 | `contract/src/holders.rs` | The 50-entry drop-oldest holder ring and the `holder_total` counter |
 | `contract/src/storage.rs` | Worst-case prepay constants and the storage invariant helper |
 | `contract/src/events.rs` | NEP-297 event emission for the warranty events |
-| `contract/src/tests/` | Unit tests: `mint`, `pay`, `expire`, `transfer`, `storage`, `common` |
+| `contract/src/tests/` | Unit tests: `mint`, `open_mint`, `pay`, `expire`, `transfer`, `storage`, `common` |
 
 Three rules that shape this layout:
 

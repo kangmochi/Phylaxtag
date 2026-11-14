@@ -207,3 +207,23 @@ line survives the abort.
 
 The redeploy that carries this change is 367,712 bytes, sha256
 `63cfae3d60e84168fc03dc1eb426dbef7b76f76a2ca536f2539278ee6768cebe`. Contract state is unchanged.
+
+## Practice contract for reviewers (`mint_open`)
+
+Taken on 14 November 2026, after the judging window opened. The demo contract keeps the issuer
+allowlist, because its story is "the seller funds the warranty". A reviewer still had no way to try
+`mint` without an account we allowlisted by hand, so a second testnet account
+(`sandbox.phylaxtag-jiwoo-11041950.testnet`) runs the same wasm plus one extra method.
+
+- The caller funds the tag from their own wallet (fund + storage + the spec 5.4 prepay). There is no
+  house pool, so the open path cannot be drained, and the excess deposit is refunded as in `mint`.
+- The contract assigns the token id (`J-<n>`) and fixes the expiry at mint time + 30 days (2592e9 ns),
+  so a visitor can neither pick an id that squats on a demo token nor leave a tag open forever.
+- One tag per account, and the contract stops at 100 tags (`Practice cap reached`). A per-account set
+  and a counter are the only state this adds.
+- The demo contract is not redeployed. Adding state fields to `Contract` means a redeploy there would
+  need a migration, and the 375,560-byte build has a different code hash, so the demo keeps its
+  367,712-byte 6 Nov build and its published hash.
+- The web app reaches the practice contract through `VITE_PRACTICE_CONTRACT_ID`. When a visitor has no
+  wallet, `/try` offers an in-browser stand-in instead, labelled "nothing on chain": it is the same
+  in-memory contract the tests use, so no real key is ever asked for.

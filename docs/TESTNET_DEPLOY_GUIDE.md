@@ -16,6 +16,8 @@ Markers on commands:
 | Parent (testnet) | `phylaxtag-jiwoo-11041950.testnet` **[live]** |
 | Contract | `demo.phylaxtag-jiwoo-11041950.testnet` **[live]** |
 | Explorer | https://testnet.nearblocks.io/accounts/demo.phylaxtag-jiwoo-11041950.testnet |
+| Practice contract (behind `/try`) | `sandbox.phylaxtag-jiwoo-11041950.testnet` **[live]** |
+| Practice explorer | https://testnet.nearblocks.io/accounts/sandbox.phylaxtag-jiwoo-11041950.testnet |
 | Web app | https://phylaxtag.vercel.app/ **[live]** |
 | Demo token | `EB-005` — cap 0.3 NEAR, cooldown 900 s, expiry 2030-01-01; one claim of 0.3 NEAR paid, 0.7 NEAR left (RPC check, 10 Nov 2026) **[live]** |
 
@@ -51,7 +53,12 @@ cargo build --target wasm32-unknown-unknown --release
 ls -l target/wasm32-unknown-unknown/release/phylaxtag.wasm
 ```
 
-Size: **367,712 bytes** with the release profile in `Cargo.toml` (measured on the 6 Nov 2026 rebuild that is deployed, sha256 `63cfae3d60e84168fc03dc1eb426dbef7b76f76a2ca536f2539278ee6768cebe`; the earlier builds were 366,256 and 367,032 bytes, so expect the figure to move a little between rebuilds). That is about 3.68 NEAR locked for code storage. The older unoptimised build was 592,362 bytes.
+Size: **375,560 bytes** with the release profile in `Cargo.toml` (the 14 Nov 2026 build, which adds
+`mint_open`; sha256 `d1c48fb0657c2a2b599ba5c1764cc418d99c200f19bffd2aef71ee805c93110f`). The demo
+contract still runs the 6 Nov build, 367,712 bytes, sha256
+`63cfae3d60e84168fc03dc1eb426dbef7b76f76a2ca536f2539278ee6768cebe`. Earlier builds were 366,256 and
+367,032 bytes, so expect the figure to move a little between rebuilds. That is about 3.76 NEAR
+locked for code storage. The older unoptimised build was 592,362 bytes.
 
 ## 3. Parent account and faucet
 
@@ -78,6 +85,7 @@ Starting balances **[estimate]** for a fresh parent:
 | `alice.$PARENT` | first owner | 0.5 NEAR |
 | `budi.$PARENT` | second owner | 0.5 NEAR |
 | `ws-a.$PARENT` / `ws-b.$PARENT` | workshops | 0.1 NEAR each |
+| `sandbox.$PARENT` | practice contract behind `/try` | 4 NEAR (code + reserve) |
 
 ```bash
 near account create-account fund-myself phylaxtag.$PARENT '5 NEAR' \
@@ -100,6 +108,46 @@ near contract deploy phylaxtag.$PARENT \
   prepaid-gas '100 Tgas' attached-deposit '0 NEAR' \
   network-config testnet sign-with-legacy-keychain send
 ```
+
+## 5a. The practice contract behind `/try`
+
+A separate account runs the same wasm with no issuer allowlist. `new(admin, issuers)` is called with
+an empty `issuers` list; the open mint does not read it. The account needs about 4 NEAR: the code
+alone locks ~3.76 NEAR.
+
+```bash
+export PARENT=phylaxtag-jiwoo-11041950.testnet
+near account create-account fund-myself sandbox.$PARENT '4 NEAR' \
+  autogenerate-new-keypair save-to-legacy-keychain \
+  sign-as $PARENT network-config testnet sign-with-legacy-keychain send
+
+near contract deploy sandbox.$PARENT \
+  use-file contract/target/wasm32-unknown-unknown/release/phylaxtag.wasm \
+  with-init-call new \
+  json-args "{\"admin\":\"admin.$PARENT\",\"issuers\":[]}" \
+  prepaid-gas '100 Tgas' attached-deposit '0 NEAR' \
+  network-config testnet sign-with-legacy-keychain send
+```
+
+`mint_open` takes no `token_id` and no `expiry`: the contract assigns `J-<n>` and fixes the expiry
+at mint time + 30 days. **Every integer argument must be a JSON string** (`"cooldown_ns":"300000000000"`);
+a bare JSON number is rejected by the SDK before the contract runs, and the wallet shows only a VM
+trap. A caller can mint once; the contract stops at 100 practice tags in total.
+
+```bash
+export EXPIRY=$(( ($(date +%s) + 30*86400) * 1000000000 ))
+near contract call-function as-transaction sandbox.$PARENT mint_open json-args "{
+  \"serial_hash\":\"45422d3030360000000000000000000000000000000000000000000000000000\",
+  \"fund_amount\":\"500000000000000000000000\",
+  \"claim_cap\":\"250000000000000000000000\",
+  \"cooldown_ns\":\"300000000000\",
+  \"workshops\":[\"ws-a.$PARENT\"],
+  \"metadata\":{\"title\":\"Practice tag\",\"description\":\"Judge sandbox\",\"copies\":1}
+}" prepaid-gas '100 Tgas' attached-deposit '0.4 NEAR' \
+  sign-as <your-testnet-account> network-config testnet sign-with-legacy-keychain send
+```
+
+Views: `get_open_mint_info` (`minted_total`, `cap`, `expiry_ns`) and `open_mint_used(account_id)`.
 
 ## 6. Mint a demo token like EB-005
 
@@ -166,6 +214,7 @@ Environment variables (public build-time values, not secrets). Set them for **Pr
 | Name | Value |
 | --- | --- |
 | `VITE_CONTRACT_ID` | `demo.phylaxtag-jiwoo-11041950.testnet` **[live]** |
+| `VITE_PRACTICE_CONTRACT_ID` | `sandbox.phylaxtag-jiwoo-11041950.testnet` **[live]**; without it `/try` shows a notice and the demo form only |
 | `VITE_NETWORK_ID` | `testnet` — required; the app refuses to run without it **[repo]** |
 | `VITE_RPC_URL` | required, e.g. `https://rpc.testnet.fastnear.com`; `VITE_RPC_FALLBACK_URL` defaults to FastNEAR in `web/src/config.ts` **[repo]** |
 | `VITE_WALLETCONNECT_PROJECT_ID` | optional; only enables the EVM group (MetaMask, Coinbase Wallet, WalletConnect QR). Not set in the current production deploy, so the group is hidden **[live]** |

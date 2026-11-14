@@ -5,6 +5,7 @@ import type { Chain } from "./chain";
 import { lazyNearChain } from "./client";
 
 const config: AppConfig = {
+  practiceContractId: "",
   contractId: "phylaxtag.testnet",
   rpcUrl: "https://rpc.testnet.near.org",
   rpcFallbackUrl: "https://rpc.testnet.near.org",
@@ -50,6 +51,24 @@ describe("lazyNearChain", () => {
     await chain.connectWith?.("meteor-wallet");
     expect(records).toEqual(["connectWith:meteor-wallet"]);
     expect(records).not.toContain("connect");
+  });
+
+  it("routes callOn to the practice contract, not the demo contract", async () => {
+    const seen: string[] = [];
+    const inner = fakeChain([]);
+    inner.callOn = async (contractId) => {
+      seen.push(contractId);
+      return { hash: "h", returnValue: null };
+    };
+    const chain = lazyNearChain(config, async () => inner);
+    await chain.callOn?.("sandbox.phylaxtag.testnet", {
+      method: "mint_open",
+      args: {},
+      depositYocto: "0",
+      gas: "100000000000000",
+      onPhase: () => undefined,
+    });
+    expect(seen).toEqual(["sandbox.phylaxtag.testnet"]);
   });
 
   it("reports the wallets whose chunk failed", async () => {
