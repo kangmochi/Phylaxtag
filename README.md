@@ -18,10 +18,12 @@ To our knowledge, a working NFT-warranty implementation on NEAR. This repository
 | X | https://x.com/Phylaxtag |
 | Contract | `demo.phylaxtag-jiwoo-11041950.testnet` |
 | Explorer | https://testnet.nearblocks.io/accounts/demo.phylaxtag-jiwoo-11041950.testnet |
+| Practice contract | `sandbox.phylaxtag-jiwoo-11041950.testnet` — the `/try` page mints here; one tag per account, expiry fixed at 30 days |
+| Practice explorer | https://testnet.nearblocks.io/accounts/sandbox.phylaxtag-jiwoo-11041950.testnet |
 | Demo token | `EB-005` — fund 1.0 NEAR at mint, per-claim cap 0.3 NEAR, cooldown 900 s; one claim of 0.3 NEAR paid, 0.7 NEAR left (checked on chain 6 Nov 2026) |
 | Parent account | `phylaxtag-jiwoo-11041950.testnet` |
 
-| Deployment | Vercel builds `web/` on every push to `main`; the build needs `VITE_CONTRACT_ID`, `VITE_RPC_URL`, `VITE_NETWORK_ID`, and `VITE_WALLETCONNECT_PROJECT_ID` for the EVM group |
+| Deployment | Vercel builds `web/` on every push to `main`; the build needs `VITE_CONTRACT_ID`, `VITE_PRACTICE_CONTRACT_ID`, `VITE_RPC_URL`, `VITE_NETWORK_ID`, and `VITE_WALLETCONNECT_PROJECT_ID` for the EVM group |
 
 <p align="center">
   <img src="docs/brand/app-home.png" alt="Phylaxtag on NEAR testnet: warranty EB-005 with 0.7 NEAR left in the fund and a 0.3 NEAR per-claim cap" width="100%">
@@ -37,6 +39,7 @@ To our knowledge, a working NFT-warranty implementation on NEAR. This repository
 | Connect a wallet | Anyone on NEAR testnet; the app only ever signs for the account you connect |
 | `mint` | Only an account on the issuer allowlist. Any other wallet is refused with "This account is not an allowed issuer." |
 | `pay_service`, `nft_transfer` | Only the current holder of that token, or an account the holder approved for the transfer (NEP-178). `pay_service` is refused while any approval is active, so a listed token cannot be drained before the sale |
+| `mint_open` on the practice contract | Anyone with a testnet wallet, from the `/try` page. You fund the tag yourself, the contract picks the token id (`J-1`, `J-2`, …), the expiry is fixed at 30 days, and each account gets one tag |
 | `expire` | Anyone, but only after that token's expiry (the demo token `EB-005` expires on 2030-01-01) |
 
 So a visitor can read everything and connect a wallet, while the state-changing calls stay with
@@ -49,11 +52,16 @@ holder-only page yours to try.
 
 ### Official contract
 
-Only `demo.phylaxtag-jiwoo-11041950.testnet` is this project. An earlier testnet contract,
+Only `demo.phylaxtag-jiwoo-11041950.testnet` and its practice deployment
+`sandbox.phylaxtag-jiwoo-11041950.testnet` are this project. An earlier testnet contract,
 `phylaxtag.phylaxtag-jiwoo-11041950.testnet`, is kept as an archive: it holds the first round of
 demo tokens and is no longer used by the app. The contract code is public by nature: a NEAR contract ships as a WASM blob that anyone can download from the chain, so hiding the source would not prevent a copy. What a copy cannot do is take over these warranties, because a token is identified by its contract account plus `token_id`, and a redeployed copy lives under a different account id.
 
-To check what is actually deployed, read the code over RPC and hash the returned bytes. At the time of writing (6 Nov 2026) this prints `63cfae3d60e84168fc03dc1eb426dbef7b76f76a2ca536f2539278ee6768cebe` for 367,712 bytes:
+To check what is actually deployed, read the code over RPC and hash the returned bytes. The demo
+contract runs the build from 6 Nov 2026: `63cfae3d60e84168fc03dc1eb426dbef7b76f76a2ca536f2539278ee6768cebe`,
+367,712 bytes. The practice contract runs the build that adds `mint_open`:
+`d1c48fb0657c2a2b599ba5c1764cc418d99c200f19bffd2aef71ee805c93110f`, 375,560 bytes. Swap the
+`account_id` in the command below to read either one:
 
 ```bash
 curl -s https://rpc.testnet.fastnear.com -H 'content-type: application/json' \
@@ -77,12 +85,12 @@ Home labels: **All warranties**, **Your side**. Wallets: NEAR wallets come first
 
 ## Try it
 
-- Run `cargo test` in `contract/` - see 62 tests pass.
+- Run `cargo test` in `contract/` - see 67 tests pass.
 - Run `cargo test` in `integration-tests/` - see 8 tests pass. Build the release wasm first (the line below). CI runs this on a GitHub-hosted runner with `--test-threads=1`. The sandbox creates its own accounts. It needs a network the first time, because `near-sandbox` downloads its binary.
 - Run `cargo fmt --check` in `contract/` and in `integration-tests/` - see no diff. CI runs this.
 - Run `cargo clippy --all-targets -- -D warnings` in `contract/` and in `integration-tests/` - see no warnings. CI runs this.
 - Run `cargo build --target wasm32-unknown-unknown --release` in `contract/` - see `contract/target/wasm32-unknown-unknown/release/phylaxtag.wasm`. The wasm file is gitignored.
-- Run `npm test` in `web/` - see 70 tests pass (Vitest).
+- Run `npm test` in `web/` - see 75 tests pass (Vitest).
 - Run `npm run e2e` in `web/` - see 27 tests pass (Playwright).
 - Deploy to testnet - the live demo uses `demo.phylaxtag-jiwoo-11041950.testnet` under parent `phylaxtag-jiwoo-11041950.testnet`; the full procedure is in [docs/TESTNET_DEPLOY_GUIDE.md](docs/TESTNET_DEPLOY_GUIDE.md).
 
@@ -119,7 +127,7 @@ cd contract
 cargo test
 ```
 
-62 tests pass. `cargo test` in `contract/` does not need OpenSSL or pkg-config.
+67 tests pass. `cargo test` in `contract/` does not need OpenSSL or pkg-config.
 
 Spec IDs in this run:
 
