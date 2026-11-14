@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 import { isNearAccountId } from "../near/account-id";
 import { formatNear, parseNearInput } from "../near/amounts";
@@ -60,6 +60,9 @@ export function TryPage({
   const [title, setTitle] = useState("Practice tag");
   const [tx, setTx] = useState<TxState>({ kind: "idle" });
   const [demoToken, setDemoToken] = useState<string | null>(null);
+  const [demoRuns, setDemoRuns] = useState(0);
+  // One stand-in per tab, so the practice tags pile up and the ids count up.
+  const demoContract = useRef<unknown>(null);
   const [mintedId, setMintedId] = useState<string | null>(null);
 
   const parent = useMemo(() => parentOf(practiceContractId), [practiceContractId]);
@@ -227,12 +230,20 @@ export function TryPage({
       // The stand-in lives in the bundle for this section only; it never signs,
       // never holds a key, and nothing it does reaches a chain.
       const { FakeContract } = await import("../test-wallet/fake-contract");
-      const fake = new FakeContract(practiceContractId || "practice.testnet");
+      const fake = (demoContract.current ??= new FakeContract(practiceContractId || "practice.testnet")) as InstanceType<
+        typeof FakeContract
+      >;
       const callArgs = requestArgs(hashed);
+      // The contract allows one tag per wallet, so each demo run is a new demo
+      // account: a judge can press the button as often as they like.
+      const run = demoRuns + 1;
+      const signer = run === 1 ? "judge.test" : `judge-${run}.test`;
       // The stand-in checks the same deposit rule as the contract, and there is
       // no real money here, so the fund amount stands in for the deposit.
-      const minted = fake.call("mint_open", callArgs, "you.test", callArgs.fund_amount) as MintedToken;
+      const minted = fake.call("mint_open", callArgs, signer, callArgs.fund_amount) as MintedToken;
       setDemoToken(minted.token_id ?? null);
+      setDemoRuns(run);
+      setSerial(`PRACTICE-${run + 1}`);
       setTx({ kind: "idle" });
     } catch (caught) {
       const raw = caught instanceof Error ? caught.message : String(caught);
@@ -279,6 +290,12 @@ export function TryPage({
             )}
             , or use a different account.
           </p>
+          <p className="note">
+            Want to press mint a few more times? Demo mode needs no wallet and no second account.
+          </p>
+          <button type="button" className="secondary" onClick={() => void demoMint()} disabled={problems.length > 0}>
+            Mint in demo mode (nothing on chain)
+          </button>
         </div>
       ) : null}
 
@@ -377,8 +394,9 @@ export function TryPage({
         ) : null}
         {demoToken ? (
           <p role="status">
-            Demo mode minted <code>{demoToken}</code> in this tab only. Nothing was sent to a chain, and
-            reloading forgets it.
+            Demo run {demoRuns}: minted <code>{demoToken}</code> in this tab only. Nothing was sent to a
+            chain, and reloading forgets it. The contract allows one tag per wallet, so each run uses a
+            fresh demo account — press it as often as you like.
           </p>
         ) : null}
       </form>

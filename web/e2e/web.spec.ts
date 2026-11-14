@@ -115,9 +115,16 @@ test("/try mints a practice tag in demo mode and labels it as off-chain", async 
   // instead of pretending a chain call would work.
   await expect(page.getByText("This build has no practice contract configured.")).toBeVisible();
   // Every field already holds a working default, so one click is enough.
-  await expect(page.getByRole("button", { name: "Mint in demo mode (nothing on chain)" })).toBeEnabled();
-  await page.getByRole("button", { name: "Mint in demo mode (nothing on chain)" }).click();
-  await expect(page.getByRole("status")).toContainText("Demo mode minted");
+  const demo = page.getByRole("button", { name: "Mint in demo mode (nothing on chain)" });
+  await expect(demo).toBeEnabled();
+  await demo.click();
+  await expect(page.getByRole("status")).toContainText("Demo run 1");
+  await expect(page.getByRole("status")).toContainText("J-1");
+
+  // A judge presses twice: each run is a new demo account, so the second works.
+  await demo.click();
+  await expect(page.getByRole("status")).toContainText("Demo run 2");
+  await expect(page.getByRole("status")).toContainText("J-2");
   await expect(page.getByRole("status")).toContainText("Nothing was sent to a chain");
 });
 
