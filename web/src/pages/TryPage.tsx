@@ -52,12 +52,12 @@ export function TryPage({
   const [info, setInfo] = useState<OpenMintInfo | null>(null);
   const [used, setUsed] = useState(false);
   const [salt] = useState(randomSaltHex);
-  const [serial, setSerial] = useState("");
+  const [serial, setSerial] = useState("PRACTICE-1");
   const [fund, setFund] = useState("0.5");
   const [cap, setCap] = useState("0.25");
   const [cooldownSeconds, setCooldownSeconds] = useState("60");
   const [workshop, setWorkshop] = useState("");
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState("Practice tag");
   const [tx, setTx] = useState<TxState>({ kind: "idle" });
   const [demoToken, setDemoToken] = useState<string | null>(null);
   const [mintedId, setMintedId] = useState<string | null>(null);
@@ -107,6 +107,12 @@ export function TryPage({
       active = false;
     };
   }, [chain, accountId, practiceContractId, tx]);
+
+  // A visitor should not have to invent a workshop: the project workshop is
+  // pre-filled, and the whole field list sits under "Advanced options".
+  useEffect(() => {
+    setWorkshop((current) => (current.trim() ? current : defaultWorkshop));
+  }, [defaultWorkshop]);
 
   const problems = useMemo(() => {
     const list: string[] = [];
@@ -172,6 +178,15 @@ export function TryPage({
       workshops: splitWorkshops(workshop),
       metadata: { title: title.trim(), description: "Practice tag", copies: 1 },
     };
+  }
+
+  function resetDefaults() {
+    setSerial("PRACTICE-1");
+    setFund("0.5");
+    setCap("0.25");
+    setCooldownSeconds("60");
+    setWorkshop(defaultWorkshop);
+    setTitle("Practice tag");
   }
 
   async function mint(event: FormEvent) {
@@ -268,43 +283,43 @@ export function TryPage({
       ) : null}
 
       <form onSubmit={(event) => void mint(event)}>
-        <button
-          type="button"
-          className="secondary"
-          onClick={() => {
-            setSerial("PRACTICE-1");
-            setFund("0.5");
-            setCap("0.25");
-            setCooldownSeconds("60");
-            setWorkshop(defaultWorkshop);
-            setTitle("Practice tag");
-          }}
-        >
-          Fill example values
-        </button>
-        <Field id="try-serial" label="Serial (any text; it stays in this browser, only the hash is sent)">
-          <input id="try-serial" value={serial} placeholder="e.g. PRACTICE-1" onChange={(event) => setSerial(event.target.value)} />
-        </Field>
         <Field id="try-fund" label="Fund (NEAR) — you pay this into the tag">
           <input id="try-fund" value={fund} inputMode="decimal" onChange={(event) => setFund(event.target.value)} />
         </Field>
-        <Field id="try-cap" label="Per-claim cap (NEAR)">
-          <input id="try-cap" value={cap} inputMode="decimal" onChange={(event) => setCap(event.target.value)} />
-        </Field>
-        <Field id="try-cooldown" label="Cooldown (seconds)">
-          <input id="try-cooldown" value={cooldownSeconds} inputMode="numeric" onChange={(event) => setCooldownSeconds(event.target.value)} />
-        </Field>
-        <Field id="try-workshop" label="Workshop account id">
-          <input
-            id="try-workshop"
-            value={workshop}
-            placeholder={defaultWorkshop || "ws-a.example.testnet"}
-            onChange={(event) => setWorkshop(event.target.value)}
-          />
-        </Field>
-        <Field id="try-title" label="Tag title">
-          <input id="try-title" value={title} placeholder="e.g. Practice tag" onChange={(event) => setTitle(event.target.value)} />
-        </Field>
+        <p className="note">
+          Everything else already has a working value. Open “Advanced options” only if you want a
+          different tag title, cap, cooldown, workshop or serial.
+        </p>
+        <details className="card advanced">
+          <summary>Advanced options</summary>
+          <Field id="try-title" label="Tag title">
+            <input id="try-title" value={title} placeholder="e.g. Practice tag" onChange={(event) => setTitle(event.target.value)} />
+          </Field>
+          <Field id="try-cap" label="Per-claim cap (NEAR)">
+            <input id="try-cap" value={cap} inputMode="decimal" onChange={(event) => setCap(event.target.value)} />
+          </Field>
+          <Field id="try-cooldown" label="Cooldown (seconds)">
+            <input id="try-cooldown" value={cooldownSeconds} inputMode="numeric" onChange={(event) => setCooldownSeconds(event.target.value)} />
+          </Field>
+          <Field id="try-workshop" label="Workshop account id (where a claim would be paid)">
+            <input
+              id="try-workshop"
+              value={workshop}
+              placeholder={defaultWorkshop || "ws-a.example.testnet"}
+              onChange={(event) => setWorkshop(event.target.value)}
+            />
+            <span className="note">
+              Already set to this project's workshop. A claim pays this account, so it has to be a
+              real NEAR account, not a label like “E-bike”.
+            </span>
+          </Field>
+          <Field id="try-serial" label="Serial (any text; it stays in this browser, only the hash is sent)">
+            <input id="try-serial" value={serial} placeholder="e.g. PRACTICE-1" onChange={(event) => setSerial(event.target.value)} />
+          </Field>
+          <button type="button" className="secondary" onClick={resetDefaults}>
+            Reset the defaults
+          </button>
+        </details>
 
         {showProblems ? (
           <ul className="alert" role="alert">
